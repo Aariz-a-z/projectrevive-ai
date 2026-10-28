@@ -1,0 +1,37 @@
+# --- Python ---
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# --- Node / Next ---
+node_modules/
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+
+# --- Secrets and local config ---
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# --- Local data ---
+*.db
+*.sqlite3
+projectrevive.db
+
+# --- Caches for optional ML extras ---
+.cache/
+models/
+*.npy
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

@@ -1,0 +1,85 @@
+@import "tailwindcss";
+
+/* A restrained technical palette: near-neutral surfaces, one accent, and
+   semantic colours reserved for provenance (stated vs inferred) and status.
+   README section 9 asks for typography and hierarchy over decoration. */
+:root {
+  --background: #fbfbfa;
+  --surface: #ffffff;
+  --surface-muted: #f4f4f2;
+  --border: #e3e3df;
+  --border-strong: #cfcfc9;
+  --foreground: #1a1a19;
+  --muted: #6b6b66;
+  --accent: #1f5f4f;
+  --accent-soft: #e7f1ee;
+  --stated: #1f5f4f;
+  --stated-soft: #e7f1ee;
+  --inferred: #8a5a12;
+  --inferred-soft: #fcf2e2;
+  --danger: #a32b22;
+  --danger-soft: #fbeae8;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #121311;
+    --surface: #1a1b19;
+    --surface-muted: #212320;
+    --border: #2e302d;
+    --border-strong: #3f423e;
+    --foreground: #ececea;
+    --muted: #9b9b95;
+    --accent: #6fbfa6;
+    --accent-soft: #1b2e29;
+    --stated: #6fbfa6;
+    --stated-soft: #1b2e29;
+    --inferred: #d9a85c;
+    --inferred-soft: #2e2719;
+    --danger: #e98b82;
+    --danger-soft: #30201e;
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-border-subtle: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-stated: var(--stated);
+  --color-stated-soft: var(--stated-soft);
+  --color-inferred: var(--inferred);
+  --color-inferred-soft: var(--inferred-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  text-rendering: optimizeLegibility;
+}
+
+/* Visible focus for keyboard users everywhere, not just on links. */
+:where(a, button, input, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

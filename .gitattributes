@@ -1,0 +1,20 @@
+# Normalise text to LF in the repository; checkout honours the platform.
+* text=auto eol=lf
+
+# Binary assets must never have line endings rewritten. A PDF in particular
+# stores byte offsets in its xref table, so CRLF conversion corrupts it --
+# and Git's text heuristic misclassifies uncompressed PDFs as text.
+*.pdf   binary
+*.docx  binary
+*.xlsx  binary
+*.ico   binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.webp  binary
+*.woff  binary
+*.woff2 binary
+
+# Generated; keep diffs out of review.
+package-lock.json linguist-generated=true -diff

@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "projectrevive-backend"
+version = "0.1.0"
+description = "ProjectRevive AI backend: document analysis and hybrid recommendation engine"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "python-multipart>=0.0.9",
+    "pydantic>=2.8",
+    "pydantic-settings>=2.4",
+    "pdfplumber>=0.11",
+    "pypdfium2>=4.30",
+    "python-docx>=1.1",
+    "sqlalchemy>=2.0",
+    "alembic>=1.13",
+    "anthropic>=0.40",
+    "scikit-learn>=1.5",
+    "numpy>=1.26",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+# Real sentence embeddings. Pulls in torch (~1.5GB image) - local/Docker only.
+semantic = [
+    "sentence-transformers>=3.0",
+]
+# Optional OCR for scanned PDFs. Also needs the Tesseract binary on PATH.
+ocr = [
+    "pytesseract>=0.3.10",
+    "pillow>=10.0",
+]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "httpx>=0.27",
+    "reportlab>=4.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["app*", "eval*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+filterwarnings = ["ignore::DeprecationWarning"]
