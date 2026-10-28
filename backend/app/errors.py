@@ -91,3 +91,47 @@ class LLMInvalidOutput(ProjectReviveError):
         "The analysis model returned output that did not match the expected "
         "structure, so it was rejected rather than shown as a result."
     )
+
+
+# --- Authentication ---------------------------------------------------------
+
+
+class NotAuthenticated(ProjectReviveError):
+    code = "not_authenticated"
+    status = 401
+    message = "Sign in to continue."
+
+
+class InvalidSession(NotAuthenticated):
+    code = "invalid_session"
+    message = "Your session is no longer valid. Sign in again."
+
+
+class InvalidCredentials(ProjectReviveError):
+    """Deliberately identical for an unknown email and a wrong password.
+
+    Distinguishing them would let anyone test which email addresses have
+    accounts here.
+    """
+
+    code = "invalid_credentials"
+    status = 401
+    message = "That email and password combination is not correct."
+
+
+class EmailAlreadyRegistered(ProjectReviveError):
+    code = "email_already_registered"
+    status = 409
+    message = "An account already exists for that email address."
+
+
+class WeakPassword(ProjectReviveError):
+    code = "weak_password"
+    status = 422
+    message = "That password is too weak."
+
+
+class Forbidden(ProjectReviveError):
+    code = "forbidden"
+    status = 403
+    message = "That item does not belong to your account."

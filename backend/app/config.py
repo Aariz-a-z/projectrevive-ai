@@ -23,6 +23,16 @@ class Settings(BaseSettings):
     # --- Storage ---
     database_url: str = "sqlite:///./projectrevive.db"
 
+    # --- Auth ---
+    # Leave SECRET_KEY unset in development: a random key is generated and
+    # persisted to backend/.secret_key (gitignored) so sessions survive
+    # reloads. It MUST be set explicitly in production.
+    secret_key: str = ""
+    access_token_minutes: int = 60 * 24 * 7
+    cookie_name: str = "pr_session"
+    cookie_secure: bool = False  # True behind HTTPS in production
+    min_password_length: int = 10
+
     # --- Upload limits (README section 10) ---
     max_upload_mb: int = 20
     max_pages: int = 300

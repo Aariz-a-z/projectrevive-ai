@@ -1,78 +1,123 @@
 @import "tailwindcss";
 
-/* A restrained technical palette: near-neutral surfaces, one accent, and
-   semantic colours reserved for provenance (stated vs inferred) and status.
-   README section 9 asks for typography and hierarchy over decoration. */
-:root {
-  --background: #fbfbfa;
-  --surface: #ffffff;
-  --surface-muted: #f4f4f2;
-  --border: #e3e3df;
-  --border-strong: #cfcfc9;
-  --foreground: #1a1a19;
-  --muted: #6b6b66;
-  --accent: #1f5f4f;
-  --accent-soft: #e7f1ee;
-  --stated: #1f5f4f;
-  --stated-soft: #e7f1ee;
-  --inferred: #8a5a12;
-  --inferred-soft: #fcf2e2;
-  --danger: #a32b22;
-  --danger-soft: #fbeae8;
-}
+/* ---------------------------------------------------------------------------
+   Dark product theme.
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #121311;
-    --surface: #1a1b19;
-    --surface-muted: #212320;
-    --border: #2e302d;
-    --border-strong: #3f423e;
-    --foreground: #ececea;
-    --muted: #9b9b95;
-    --accent: #6fbfa6;
-    --accent-soft: #1b2e29;
-    --stated: #6fbfa6;
-    --stated-soft: #1b2e29;
-    --inferred: #d9a85c;
-    --inferred-soft: #2e2719;
-    --danger: #e98b82;
-    --danger-soft: #30201e;
-  }
+   Deliberately dark-only: the palette depends on luminous accents against a
+   deep ground, and a light variant would need a different accent set rather
+   than inverted tokens. `color-scheme: dark` tells the browser to style
+   scrollbars and form controls to match.
+
+   Accent colours carry meaning and are not decorative:
+     cyan    structure and navigation
+     green   evidence that was found in the report
+     amber   inference, and anything needing caution
+     rose    errors and destructive actions
+--------------------------------------------------------------------------- */
+:root {
+  color-scheme: dark;
+
+  --bg: #070b16;
+  --bg-grad-a: #0a1024;
+  --bg-grad-b: #070b16;
+  --panel: #0e1629;
+  --panel-raised: #141f38;
+  --panel-inset: #0a1222;
+  --border: #1d2b4d;
+  --border-bright: #2a3f6d;
+
+  --fg: #e9eefc;
+  --fg-dim: #b3c0dd;
+  --muted: #7e8db0;
+
+  --cyan: #22d3ee;
+  --blue: #4b8cf7;
+  --violet: #a78bfa;
+  --green: #34d399;
+  --amber: #fbbf24;
+  --rose: #fb7185;
+
+  --cyan-soft: #0c3a47;
+  --green-soft: #0d3a2c;
+  --amber-soft: #3d2f0c;
+  --rose-soft: #3d1620;
+  --violet-soft: #2a1f4d;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-surface: var(--surface);
-  --color-surface-muted: var(--surface-muted);
-  --color-border-subtle: var(--border);
-  --color-border-strong: var(--border-strong);
-  --color-foreground: var(--foreground);
+  --color-bg: var(--bg);
+  --color-panel: var(--panel);
+  --color-panel-raised: var(--panel-raised);
+  --color-panel-inset: var(--panel-inset);
+  --color-edge: var(--border);
+  --color-edge-bright: var(--border-bright);
+  --color-fg: var(--fg);
+  --color-fg-dim: var(--fg-dim);
   --color-muted: var(--muted);
-  --color-accent: var(--accent);
-  --color-accent-soft: var(--accent-soft);
-  --color-stated: var(--stated);
-  --color-stated-soft: var(--stated-soft);
-  --color-inferred: var(--inferred);
-  --color-inferred-soft: var(--inferred-soft);
-  --color-danger: var(--danger);
-  --color-danger-soft: var(--danger-soft);
+  --color-cyan: var(--cyan);
+  --color-blue: var(--blue);
+  --color-violet: var(--violet);
+  --color-green: var(--green);
+  --color-amber: var(--amber);
+  --color-rose: var(--rose);
+  --color-cyan-soft: var(--cyan-soft);
+  --color-green-soft: var(--green-soft);
+  --color-amber-soft: var(--amber-soft);
+  --color-rose-soft: var(--rose-soft);
+  --color-violet-soft: var(--violet-soft);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background:
+    radial-gradient(1100px 620px at 12% -8%, #16224a 0%, transparent 60%),
+    radial-gradient(900px 520px at 92% 0%, #1a1740 0%, transparent 55%),
+    linear-gradient(180deg, var(--bg-grad-a) 0%, var(--bg-grad-b) 55%);
+  background-attachment: fixed;
+  color: var(--fg);
   font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   text-rendering: optimizeLegibility;
 }
 
-/* Visible focus for keyboard users everywhere, not just on links. */
-:where(a, button, input, summary, [tabindex]):focus-visible {
-  outline: 2px solid var(--accent);
+/* Panel edge that reads as a thin lit rim rather than a drawn border. */
+.panel {
+  background: linear-gradient(180deg, var(--panel-raised) 0%, var(--panel) 100%);
+  border: 1px solid var(--border);
+  box-shadow:
+    0 1px 0 0 rgb(255 255 255 / 4%) inset,
+    0 18px 40px -24px rgb(0 0 0 / 80%);
+}
+
+.panel-inset {
+  background: var(--panel-inset);
+  border: 1px solid var(--border);
+}
+
+.grad-text {
+  background: linear-gradient(92deg, var(--cyan) 0%, var(--blue) 45%, var(--violet) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Faint grid, like a technical drawing surface. */
+.grid-surface {
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 34px 34px;
+  opacity: 0.16;
+}
+
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--cyan);
   outline-offset: 2px;
-  border-radius: 3px;
+  border-radius: 4px;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--blue) 45%, transparent);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -81,5 +126,6 @@ body {
   *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

@@ -85,6 +85,12 @@ export interface AnalysisDetail extends AnalysisSummary {
   warnings: string[];
 }
 
+export interface UserPublic {
+  id: string;
+  email: string;
+  created_at: string;
+}
+
 export interface HealthInfo {
   status: string;
   llm: {

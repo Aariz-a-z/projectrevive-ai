@@ -9,8 +9,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.analysis.profile import build_profile
+from app.auth.deps import get_current_user
 from app.config import Settings, get_settings
-from app.db.models import Analysis
+from app.db.models import Analysis, User
 from app.db.session import get_db
 from app.documents.extract import extract
 from app.errors import AnalysisNotFound, EmptyDocument, FileTooLarge
@@ -82,6 +83,7 @@ async def create_analysis(
     file: UploadFile,
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
+    user: User = Depends(get_current_user),
 ) -> AnalysisDetail:
     """Upload a project report and get its structured profile back.
 
@@ -98,6 +100,7 @@ async def create_analysis(
 
     row = Analysis(
         id=uuid.uuid4().hex,
+        user_id=user.id,
         filename=document.filename,
         content_type=document.content_type,
         page_count=document.page_count,
@@ -117,9 +120,15 @@ async def create_analysis(
 
 
 @router.get("", response_model=list[AnalysisSummary])
-def list_analyses(db: Session = Depends(get_db)) -> list[AnalysisSummary]:
+def list_analyses(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> list[AnalysisSummary]:
     rows = db.scalars(
-        select(Analysis).order_by(Analysis.created_at.desc()).limit(50)
+        select(Analysis)
+        .where(Analysis.user_id == user.id)
+        .order_by(Analysis.created_at.desc())
+        .limit(50)
     ).all()
     return [
         AnalysisSummary(
@@ -136,8 +145,27 @@ def list_analyses(db: Session = Depends(get_db)) -> list[AnalysisSummary]:
 
 
 @router.get("/{analysis_id}", response_model=AnalysisDetail)
-def get_analysis(analysis_id: str, db: Session = Depends(get_db)) -> AnalysisDetail:
+def get_analysis(
+    analysis_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> AnalysisDetail:
     row = db.get(Analysis, analysis_id)
-    if row is None:
+    # Another account's analysis is reported as missing rather than forbidden,
+    # so this endpoint cannot be used to discover which ids exist.
+    if row is None or row.user_id != user.id:
         raise AnalysisNotFound()
     return _to_detail(row)
+
+
+@router.delete("/{analysis_id}", status_code=204)
+def delete_analysis(
+    analysis_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> None:
+    row = db.get(Analysis, analysis_id)
+    if row is None or row.user_id != user.id:
+        raise AnalysisNotFound()
+    db.delete(row)
+    db.commit()

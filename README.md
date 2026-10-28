@@ -3,17 +3,22 @@
 Analyses an existing AI/ML project report and recommends evidence-based,
 explainable improvements.
 
-> **Status: Phase 0 complete — walking skeleton.** Upload a PDF or DOCX, get a
-> structured project profile with page-cited evidence. The recommendation
-> engine, stack comparison, architecture diagrams, roadmap and export are not
-> built yet. See [Roadmap](#roadmap).
+> **Status: accounts + analysis dashboard.** Create an account, upload a PDF or
+> DOCX, and read a structured project profile with page-cited evidence across a
+> tabbed dashboard. The recommendation engine, stack comparison, architecture
+> diagrams, roadmap and export are not built yet. See [Roadmap](#roadmap).
 
 ## What works today
 
+- **Accounts.** Email and password signup, Argon2id hashing, a JWT session in
+  an httpOnly cookie. Analyses are private to the account that created them,
+  and another account gets a 404 rather than a 403 so ids cannot be probed.
 - PDF and DOCX upload, validated by file content rather than extension.
 - Text extraction with page numbers preserved.
 - A structured `ProjectProfile`: title, domain, problem statement, algorithms,
   tech stack, evaluation metrics, stated limitations.
+- A tabbed dashboard — Overview, Tech Stack, Evaluation, Findings, Evidence —
+  including an evidence view that groups every quote by the page it came from.
 - **Every finding is labelled** as either stated in the report, with a page
   citation and verbatim quote you can open and check, or inferred, with the
   reasoning shown.
@@ -83,6 +88,9 @@ All settings come from the environment. See `backend/.env.example`.
 
 | Variable | Default | Notes |
 |---|---|---|
+| `SECRET_KEY` | _generated_ | Signs session tokens. Unset in development, a random key is generated and persisted to `backend/.secret_key` (gitignored). **Must be set explicitly in production** — there is deliberately no hardcoded fallback. |
+| `COOKIE_SECURE` | `false` | Set `true` behind HTTPS so the session cookie is never sent in clear. |
+| `MIN_PASSWORD_LENGTH` | `10` | Length floor. Composition rules are deliberately not enforced (see `backend/app/auth/policy.py`). |
 | `LLM_PROVIDER` | `mock` | `mock` costs nothing and needs no key. `anthropic` performs a real analysis. |
 | `ANTHROPIC_API_KEY` | _unset_ | Required only when `LLM_PROVIDER=anthropic`. |
 | `ANALYSIS_MODEL` | `claude-opus-5-5` | Roughly $0.25–0.40 per 20-page report. `claude-haiku-5-5` is about 25x cheaper. |
@@ -103,14 +111,18 @@ All settings come from the environment. See `backend/.env.example`.
 ## Architecture
 
 ```
-frontend/  Next 16 + Tailwind 4. Client-side fetch against the API.
+frontend/  Next 16 + Tailwind 4, dark theme. Client-side fetch against the API.
+  app/            /, /signup, /login, /dashboard, /analysis/[id]
+  components/     ui primitives, icons, claim rendering, auth form
+  lib/            typed API client, session provider
 backend/
-  app/documents/   validation and text extraction (no AI)
-  app/llm/         provider interface, mock provider, injection defence
-  app/analysis/    extracted text -> validated ProjectProfile
-  app/schemas/     the contract; provenance rules enforced here
-  app/db/          SQLAlchemy models (profiles, not uploaded files)
-  app/api/         FastAPI routes
+  app/auth/       Argon2 hashing, JWT sessions, password policy
+  app/documents/  validation and text extraction (no AI)
+  app/llm/        provider interface, mock provider, injection defence
+  app/analysis/   extracted text -> validated ProjectProfile
+  app/schemas/    the contract; provenance rules enforced here
+  app/db/         SQLAlchemy models (profiles, not uploaded files)
+  app/api/        FastAPI routes
 ```
 
 Uploaded files are processed in memory and never written to disk. What is
@@ -120,7 +132,9 @@ must display.
 ## Roadmap
 
 - [x] **Phase 0** — walking skeleton: upload, extract, profile, render
-- [ ] **Phase 1** — hardening: rate limits, Alembic migrations, CI
+- [x] **Accounts and dashboard** — signup/login, per-user analyses, dark tabbed
+      UI. Pulled forward from the original "future features" list on request.
+- [ ] **Phase 1** — hardening: rate limits on auth, Alembic migrations, CI
 - [ ] **Phase 2** — real Anthropic provider, gap analysis
 - [ ] **Phase 3** — hybrid recommendation engine and knowledge base
 - [ ] **Phase 4** — stack comparison, Mermaid architecture, roadmap, export

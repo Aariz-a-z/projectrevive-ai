@@ -1,23 +1,19 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import Link from "next/link";
+
+import { SiteHeader } from "@/components/SiteHeader";
+import { AuthProvider } from "@/lib/auth";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
+const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "ProjectRevive AI",
+  title: "ProjectRevive AI — Understand and improve any project report",
   description:
-    "Analyses an existing AI/ML project report and recommends evidence-based, " +
-    "explainable improvements.",
+    "Upload an AI/ML project report and get a structured analysis: what the " +
+    "project does, where it is weak, and what to improve — with every finding " +
+    "traced to the page it came from.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -26,36 +22,27 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
-        <header className="border-b border-border-subtle bg-surface">
-          <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
-            <Link href="/" className="flex items-baseline gap-2">
-              <span className="text-sm font-semibold tracking-tight">
-                ProjectRevive
-              </span>
-              <span className="text-[11px] font-medium tracking-widest text-muted uppercase">
-                AI
-              </span>
-            </Link>
-            <nav className="flex items-center gap-4 text-sm">
-              <Link href="/upload" className="text-muted hover:text-foreground">
-                Analyse a report
-              </Link>
-            </nav>
+      <body className="relative min-h-full">
+        <div
+          className="grid-surface pointer-events-none fixed inset-0 -z-10"
+          aria-hidden="true"
+        />
+        <AuthProvider>
+          <div className="flex min-h-screen flex-col">
+            <SiteHeader />
+            <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
+              {children}
+            </main>
+            <footer className="border-t border-edge">
+              <div className="mx-auto max-w-6xl px-4 py-5 text-xs leading-relaxed text-muted">
+                ProjectRevive AI reports what it can trace to your document.
+                Findings are labelled as stated in the report or inferred, and
+                any citation it cannot verify against the page it names is
+                rejected rather than shown.
+              </div>
+            </footer>
           </div>
-        </header>
-
-        <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
-          {children}
-        </main>
-
-        <footer className="border-t border-border-subtle bg-surface">
-          <div className="mx-auto max-w-5xl px-4 py-4 text-xs leading-relaxed text-muted">
-            ProjectRevive AI is a project-analysis tool. Its recommendations are
-            suggestions to evaluate, not validated findings, and any figures it
-            shows are labelled with where they came from.
-          </div>
-        </footer>
+        </AuthProvider>
       </body>
     </html>
   );

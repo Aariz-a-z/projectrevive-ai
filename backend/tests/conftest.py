@@ -12,6 +12,7 @@ import os
 import tempfile
 from collections.abc import Iterator
 from io import BytesIO
+from itertools import count
 from pathlib import Path
 
 import pytest
@@ -20,6 +21,8 @@ _TMP_DB = Path(tempfile.gettempdir()) / "projectrevive_test.db"
 os.environ["DATABASE_URL"] = f"sqlite:///{_TMP_DB.as_posix()}"
 os.environ["LLM_PROVIDER"] = "mock"
 os.environ["ANTHROPIC_API_KEY"] = ""
+# Fixed so tests never write the development .secret_key file.
+os.environ["SECRET_KEY"] = "test-only-signing-key-not-used-outside-the-suite"
 
 from fastapi.testclient import TestClient  # noqa: E402
 
@@ -96,8 +99,32 @@ def _database() -> Iterator[None]:
 
 @pytest.fixture
 def client() -> Iterator[TestClient]:
+    """An anonymous client. Analysis endpoints reject it with 401."""
     with TestClient(create_app()) as test_client:
         yield test_client
+
+
+# Counter so each test gets a distinct account in the shared test database.
+_account_seq = count(1)
+
+TEST_PASSWORD = "correct-horse-battery-staple"
+
+
+def register(test_client: TestClient, email: str | None = None) -> str:
+    """Sign up and leave the session cookie on the client. Returns the email."""
+    address = email or f"user{next(_account_seq)}@example.com"
+    response = test_client.post(
+        "/api/auth/signup", json={"email": address, "password": TEST_PASSWORD}
+    )
+    assert response.status_code == 201, response.text
+    return address
+
+
+@pytest.fixture
+def auth_client(client: TestClient) -> Iterator[TestClient]:
+    """A client already signed in as a fresh account."""
+    register(client)
+    yield client
 
 
 @pytest.fixture

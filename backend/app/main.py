@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
 from app.api.routes import analyses, health
+from app.auth import routes as auth_routes
 from app.config import get_settings
 from app.db.session import init_db
 from app.errors import LLMInvalidOutput, ProjectReviveError
@@ -37,11 +38,15 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    # allow_credentials is required for the session cookie to be sent on
+    # cross-origin fetches from the frontend. It is only safe because
+    # allow_origins names one exact origin -- with "*" the browser would
+    # refuse, and widening it would expose authenticated endpoints.
     app.add_middleware(
         CORSMiddleware,
         allow_origins=[settings.frontend_origin],
-        allow_credentials=False,
-        allow_methods=["GET", "POST"],
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "DELETE"],
         allow_headers=["*"],
     )
 
@@ -68,6 +73,7 @@ def create_app() -> FastAPI:
         return JSONResponse(status_code=error.status, content=error.to_payload())
 
     app.include_router(health.router, prefix="/api")
+    app.include_router(auth_routes.router, prefix="/api")
     app.include_router(analyses.router, prefix="/api")
 
     return app
