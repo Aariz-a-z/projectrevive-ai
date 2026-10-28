@@ -12,8 +12,14 @@ Every step below needs an account you own. Nothing here can be done for you.
 | API proxy carries the session cookie | **Verified** — signed up through the proxy, confirmed `Set-Cookie` returns from the proxy origin with `HttpOnly; SameSite=lax`, and an authenticated request through it succeeds |
 | Frontend production build | **Verified** — `npm run build` passes |
 | Migrations against SQLite | **Verified** — fresh database built by migration on startup, 221 tests pass |
-| Docker image builds | **Not verified** — the Docker daemon was unavailable. The Dockerfile has never been built |
-| Postgres | **Not verified** — the driver is declared but has never connected to a real database |
+| Health check reports a lost database | **Verified** — returns 503 and `"database": "unreachable"` rather than claiming to be healthy |
+| Docker image builds | **Not verified** — the Dockerfile has never been built, see below |
+| Postgres | **Not verified** — the driver is installed and SQLAlchemy resolves `postgresql://` to psycopg 3, but it has never connected to a real server |
+
+> Docker could not be started from this machine without administrator rights:
+> `com.docker.service` is set to Manual start and launching it needs a UAC
+> prompt. Start Docker Desktop yourself and accept the elevation prompt, then
+> the two commands below will run.
 
 The second two matter. SQLite and Postgres differ in ways that surface exactly
 here: stricter type handling, real transactional DDL, and `JSON` behaving

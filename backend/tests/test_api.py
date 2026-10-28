@@ -114,3 +114,39 @@ class TestMissingCredentials:
             assert "ANTHROPIC_API_KEY" in exc.message
         else:
             raise AssertionError("expected LLMUnavailable")
+
+
+class TestHealthChecksTheDatabase:
+    """The container healthcheck believes this route, so it must mean something."""
+
+    def test_reports_the_database_as_reachable(self, client: TestClient) -> None:
+        body = client.get("/api/health").json()
+        assert body["status"] == "ok"
+        assert body["database"] == "ok"
+
+    def test_reports_degraded_and_503_when_the_database_is_down(
+        self, client: TestClient
+    ) -> None:
+        """A process that lost its database still answers the port."""
+        from sqlalchemy.exc import OperationalError
+
+        from app.db.session import get_db
+        from app.main import create_app
+
+        def broken_db():
+            class Broken:
+                def execute(self, *_args, **_kwargs):
+                    raise OperationalError("SELECT 1", {}, Exception("no server"))
+
+            yield Broken()
+
+        app = create_app()
+        app.dependency_overrides[get_db] = broken_db
+
+        with TestClient(app, raise_server_exceptions=False) as broken_client:
+            response = broken_client.get("/api/health")
+
+        assert response.status_code == 503
+        body = response.json()
+        assert body["status"] == "degraded"
+        assert body["database"] == "unreachable"
