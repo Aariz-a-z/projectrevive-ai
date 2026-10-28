@@ -32,6 +32,9 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...but the template must ship: it documents BACKEND_ORIGIN, which a
+# deployment needs and which nobody can guess from a clone.
+!.env.example
 
 # vercel
 .vercel

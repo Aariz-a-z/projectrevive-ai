@@ -5,6 +5,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Literal
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -79,6 +80,21 @@ class Settings(BaseSettings):
 
     # --- CORS ---
     frontend_origin: str = "http://localhost:3000"
+
+    @field_validator("database_url")
+    @classmethod
+    def _normalise_database_url(cls, value: str) -> str:
+        """Accept the `postgres://` form several providers hand out.
+
+        SQLAlchemy 2 only recognises `postgresql://` and raises on
+        `postgres://`, but Heroku, Railway and others still issue the shorter
+        form. Rewriting it here means pasting the string a provider gives you
+        works, instead of failing at startup with an error about a dialect
+        that looks nothing like the problem.
+        """
+        if value.startswith("postgres://"):
+            return "postgresql://" + value[len("postgres://") :]
+        return value
 
     @property
     def max_upload_bytes(self) -> int:

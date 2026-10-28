@@ -34,6 +34,11 @@ dependencies = [
 semantic = [
     "sentence-transformers>=3.0",
 ]
+# Production database driver. SQLite is fine locally; a deployed instance
+# needs this for a postgresql:// DATABASE_URL.
+postgres = [
+    "psycopg[binary]>=3.2",
+]
 # Optional OCR for scanned PDFs. Also needs the Tesseract binary on PATH.
 ocr = [
     "pytesseract>=0.3.10",

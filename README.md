@@ -126,6 +126,19 @@ weaker reasoning about *why* something is a weakness.
 > that gap, and a rejected parameter surfaces as `llm_invalid_output` with the
 > API's own explanation.
 
+## Deploying
+
+See [DEPLOYMENT.md](DEPLOYMENT.md). Frontend on Vercel, backend as a Docker
+container, Postgres managed separately.
+
+One thing there is worth knowing before you change anything: **the browser
+only ever talks to the Vercel origin**, and `/api/*` is proxied to the backend
+by a Next.js rewrite. The session cookie is `SameSite=Lax`, which browsers do
+not send cross-site, and the frontend and backend sit on different registrable
+domains in production. Calling the backend directly would break authentication
+in production while continuing to work locally, because `localhost:3000` and
+`localhost:8000` are the same site.
+
 ## Database migrations
 
 The schema is managed by Alembic. `create_all` is no longer used by the

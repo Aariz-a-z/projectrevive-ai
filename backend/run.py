@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 
 import uvicorn
 
@@ -32,13 +33,18 @@ logger = logging.getLogger(__name__)
 def main() -> None:
     settings = get_settings()
 
+    # Hosts assign the port through the environment, and a container must bind
+    # 0.0.0.0 or nothing outside it can connect. Defaults stay local-only so
+    # running this on a laptop does not expose the API to the network.
     parser = argparse.ArgumentParser(description="Run the ProjectRevive API.")
-    parser.add_argument("--host", default="127.0.0.1")
-    parser.add_argument("--port", type=int, default=8000)
+    parser.add_argument("--host", default=os.environ.get("HOST", "127.0.0.1"))
+    parser.add_argument(
+        "--port", type=int, default=int(os.environ.get("PORT", "8000"))
+    )
     parser.add_argument(
         "--reload",
         action=argparse.BooleanOptionalAction,
-        default=True,
+        default=os.environ.get("RELOAD", "true").lower() == "true",
         help="Reload on code changes. Turn off in production.",
     )
     args = parser.parse_args()

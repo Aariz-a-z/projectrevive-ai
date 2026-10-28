@@ -18,7 +18,15 @@ import type {
   UserPublic,
 } from "./types";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+/**
+ * Requests go to this app's own origin and are proxied to the backend by the
+ * rewrite in next.config.ts. See that file for why: a cross-origin call would
+ * drop the SameSite=Lax session cookie in production.
+ *
+ * Keeping it relative also means the backend's address is never exposed to
+ * the browser and there is no build-time URL to get wrong per environment.
+ */
+const BASE_URL = "";
 
 export class ApiError extends Error {
   readonly code: string;
@@ -40,7 +48,7 @@ export class ApiError extends Error {
 
 const NETWORK_MESSAGE =
   "Could not reach the analysis API. Check that the backend is running and " +
-  "that NEXT_PUBLIC_API_BASE_URL points at it.";
+  "that BACKEND_ORIGIN points at it.";
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   let response: Response;

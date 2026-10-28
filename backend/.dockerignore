@@ -1,0 +1,21 @@
+# Never ship these into an image.
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Secrets and local state.
+.env
+.env.*
+!.env.example
+.secret_key
+*.db
+*.sqlite3
+
+# Not needed at runtime; keeps the image small and the build context fast.
+tests/
+eval/
+check_provider.py
