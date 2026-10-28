@@ -1,0 +1,365 @@
+# Evaluation set for the recommendation engine.
+#
+# WHO LABELLED THIS: one person -- the author of this project, who also wrote
+# the knowledge base being evaluated. There is no second annotator and no
+# inter-annotator agreement figure. Labels and system therefore share
+# assumptions, which inflates every score below. See eval/README.md.
+#
+# GRADES
+#   3  clearly the right advice for this project
+#   2  useful and appropriate
+#   1  marginal; not wrong, but not a priority here
+#   0  irrelevant or unsuitable (also the default for anything unlisted)
+#
+# Each case states a rationale so a grade can be argued with rather than
+# simply trusted.
+
+- id: fraud-detection-imbalanced
+  title: Credit card fraud detection, severe class imbalance, accuracy only
+  rationale: >-
+    Fraud is a fraction of a percent of rows, so accuracy is actively
+    misleading and per-class metrics plus a PR curve are the central fixes.
+    Class weighting is the right first move before synthetic resampling.
+    Deployment entries are irrelevant to a report that never leaves analysis.
+  project:
+    title: Credit Card Fraud Detection Using Machine Learning
+    domain: tabular machine learning
+    problem: >-
+      Detecting fraudulent transactions in a dataset where fraud accounts for
+      0.17 percent of records.
+    algorithms: [random forest, logistic regression]
+    libraries: [scikit-learn, pandas]
+    metrics: [accuracy]
+    limitations: [The dataset is highly imbalanced.]
+  findings:
+    - rule_id: class-imbalance-unaddressed
+      category: class_imbalance
+      severity: high
+      title: Class imbalance is acknowledged but not addressed
+    - rule_id: accuracy-without-class-metrics
+      category: metric_suitability
+      severity: medium
+      title: Accuracy is reported without per-class metrics
+  judgments:
+    per-class-classification-report: 3
+    class-weighting-before-resampling: 3
+    precision-recall-curve-for-imbalance: 3
+    resample-inside-folds: 2
+    choose-a-metric-that-matches-the-task: 2
+    error-analysis-pass: 2
+    stratified-k-fold-cross-validation: 2
+    add-simple-baseline: 1
+    serve-behind-an-api: 0
+    containerise-the-service: 0
+
+- id: digit-recognition-single-split
+  title: Handwritten digit recognition evaluated on one train/test split
+  rationale: >-
+    A single split on a standard benchmark is the main methodological
+    weakness, so cross-validation is the clear first fix. The project is a
+    teaching exercise, so deployment and monitoring are not priorities.
+  project:
+    title: Handwritten Digit Recognition Using Deep Learning
+    domain: computer vision
+    problem: Classifying handwritten digits from the MNIST dataset.
+    algorithms: [CNN, SVM, random forest]
+    libraries: [TensorFlow, Keras, scikit-learn]
+    metrics: [accuracy, precision, recall]
+    limitations: [No cross validation was performed.]
+  findings:
+    - rule_id: single-split-only
+      category: evaluation
+      severity: high
+      title: Evaluated on a single train/test split
+  judgments:
+    stratified-k-fold-cross-validation: 3
+    seed-everything: 2
+    add-simple-baseline: 2
+    error-analysis-pass: 2
+    learning-curves-for-data-sufficiency: 1
+    monitor-inputs-after-deployment: 0
+    validate-and-bound-api-input: 0
+
+- id: sentiment-no-baseline
+  title: BERT sentiment classifier with no baseline comparison
+  rationale: >-
+    A transformer with no simpler comparison cannot show the complexity was
+    warranted; on sentiment a TF-IDF plus logistic regression baseline is
+    often within a point or two, so a baseline is the single most informative
+    addition. Imbalance entries do not apply to a balanced corpus.
+  project:
+    title: Sentiment Analysis of Product Reviews Using BERT
+    domain: natural language processing
+    problem: >-
+      Classifying product reviews as positive or negative using a fine-tuned
+      transformer on a balanced corpus.
+    algorithms: [BERT, transformer]
+    libraries: [PyTorch, Hugging Face]
+    metrics: [accuracy, F1]
+    limitations: []
+  findings:
+    - rule_id: no-baseline-comparison
+      category: baseline
+      severity: medium
+      title: No baseline to compare against
+  judgments:
+    add-simple-baseline: 3
+    error-analysis-pass: 2
+    track-experiments: 2
+    seed-everything: 2
+    nested-cv-for-tuning: 1
+    class-weighting-before-resampling: 0
+    precision-recall-curve-for-imbalance: 0
+
+- id: medical-imaging-explainability
+  title: Tumour classification from scans, no interpretability
+  rationale: >-
+    A clinical decision support claim without any way to explain a prediction
+    is the headline problem, and duplicate scans of the same patient across
+    the split is the classic leakage mode in medical imaging. Per-class recall
+    matters more than accuracy when a false negative is a missed diagnosis.
+  project:
+    title: Tumour Detection in MRI Scans Using Deep Learning
+    domain: computer vision
+    problem: >-
+      Classifying MRI scans as tumour or healthy to support radiologist
+      review.
+    algorithms: [CNN, ResNet]
+    libraries: [PyTorch, OpenCV]
+    metrics: [accuracy]
+    limitations: [The dataset is small.]
+  findings:
+    - rule_id: no-explainability
+      category: explainability
+      severity: high
+      title: No way to explain individual predictions
+    - rule_id: accuracy-without-class-metrics
+      category: metric_suitability
+      severity: high
+      title: Accuracy is reported without per-class metrics
+  judgments:
+    permutation-importance-first: 3
+    per-class-classification-report: 3
+    check-duplicate-and-near-duplicate-rows: 3
+    error-analysis-pass: 2
+    stratified-k-fold-cross-validation: 2
+    learning-curves-for-data-sufficiency: 2
+    document-dataset-provenance: 2
+    pin-dependencies-with-a-lock-file: 1
+    containerise-the-service: 0
+
+- id: churn-prediction-no-deployment
+  title: Customer churn model that never leaves the notebook
+  rationale: >-
+    The business value depends entirely on acting on predictions, so serving
+    is the gap that matters most, with monitoring close behind once it is
+    live. Explainability is genuinely useful here because retention teams must
+    justify an intervention.
+  project:
+    title: Customer Churn Prediction for a Subscription Service
+    domain: tabular machine learning
+    problem: >-
+      Predicting which subscribers will cancel in the next month so retention
+      offers can be targeted.
+    algorithms: [XGBoost, logistic regression]
+    libraries: [scikit-learn, pandas]
+    metrics: [accuracy, AUC]
+    limitations: []
+  findings:
+    - rule_id: no-deployment
+      category: deployment
+      severity: medium
+      title: No deployment or serving path
+    - rule_id: no-testing
+      category: testing
+      severity: medium
+      title: No automated tests are mentioned
+  judgments:
+    serve-behind-an-api: 3
+    test-the-data-pipeline: 3
+    monitor-inputs-after-deployment: 2
+    containerise-the-service: 2
+    permutation-importance-first: 2
+    validate-and-bound-api-input: 2
+    pin-dependencies-with-a-lock-file: 1
+    precision-recall-curve-for-imbalance: 1
+    learning-curves-for-data-sufficiency: 1
+    # Graded 0: the project describes no resampling at all, so advice about
+    # where to place a resampler has nothing to attach to here.
+    resample-inside-folds: 0
+    check-duplicate-and-near-duplicate-rows: 0
+
+- id: tiny-dataset-overfitting
+  title: Plant disease classifier trained on a few hundred images
+  rationale: >-
+    With a dataset this small the first question is whether more data would
+    help, which only a learning curve answers, and whether the single reported
+    number is stable, which only cross-validation answers. Heavyweight
+    infrastructure entries are inappropriate at this scale.
+  project:
+    title: Plant Disease Classification From Leaf Images
+    domain: computer vision
+    problem: >-
+      Identifying three plant diseases from roughly 400 photographs collected
+      by the authors.
+    algorithms: [CNN]
+    libraries: [TensorFlow, Keras]
+    metrics: [accuracy]
+    limitations: [The dataset is small and was collected by hand.]
+  findings:
+    - rule_id: single-split-only
+      category: evaluation
+      severity: high
+      title: Evaluated on a single train/test split
+    - rule_id: no-reproducibility-controls
+      category: reproducibility
+      severity: low
+      title: No random seed or reproducibility control
+  judgments:
+    stratified-k-fold-cross-validation: 3
+    learning-curves-for-data-sufficiency: 3
+    seed-everything: 3
+    check-duplicate-and-near-duplicate-rows: 2
+    per-class-classification-report: 2
+    document-dataset-provenance: 2
+    error-analysis-pass: 2
+    monitor-inputs-after-deployment: 0
+    track-experiments: 0
+
+- id: movie-recommender-no-validation
+  title: Collaborative filtering recommender with no stated validation
+  rationale: >-
+    Nothing describes how the recommender was evaluated, so choosing a metric
+    that matches the actual ranking task comes first, followed by a popularity
+    baseline, which is notoriously hard to beat and frequently is not beaten.
+    Classification-specific entries do not apply.
+  project:
+    title: Movie Recommendation System Using Collaborative Filtering
+    domain: recommendation systems
+    problem: >-
+      Recommending films to users from a ratings matrix using matrix
+      factorisation.
+    algorithms: [matrix factorisation, KNN]
+    libraries: [scikit-learn, pandas, NumPy]
+    metrics: []
+    limitations: []
+  findings:
+    - rule_id: no-evaluation-metrics
+      category: evaluation
+      severity: high
+      title: No evaluation metrics are reported
+    - rule_id: no-validation-strategy
+      category: evaluation
+      severity: high
+      title: No validation strategy is described
+  judgments:
+    choose-a-metric-that-matches-the-task: 3
+    add-simple-baseline: 3
+    stratified-k-fold-cross-validation: 2
+    error-analysis-pass: 2
+    document-dataset-provenance: 2
+    track-experiments: 1
+    permutation-importance-first: 0
+    class-weighting-before-resampling: 0
+
+- id: energy-forecast-random-split
+  title: Energy demand forecasting split randomly instead of by time
+  rationale: >-
+    A random split on a time series lets the model train on the future and
+    test on the past, which is the dominant problem here. The pipeline entry
+    is the closest available fix for ordering preprocessing correctly, though
+    no entry yet covers time-based splitting specifically -- which is itself
+    a finding about the knowledge base.
+  project:
+    title: Short Term Energy Demand Forecasting
+    domain: time series / forecasting
+    problem: >-
+      Predicting next-day electricity demand from historical consumption and
+      weather data.
+    algorithms: [LSTM, linear regression]
+    libraries: [TensorFlow, Keras, pandas]
+    metrics: [RMSE, MAE]
+    limitations: []
+  findings:
+    - rule_id: resampling-before-split
+      category: data_leakage
+      severity: high
+      title: Resampling may have been applied before splitting
+  judgments:
+    pipeline-to-prevent-leakage: 3
+    check-duplicate-and-near-duplicate-rows: 2
+    add-simple-baseline: 2
+    seed-everything: 2
+    learning-curves-for-data-sufficiency: 1
+    class-weighting-before-resampling: 0
+    per-class-classification-report: 0
+
+- id: research-irreproducible
+  title: Published results with no seeds, versions or tracking
+  rationale: >-
+    Every reported comparison in this project is unfalsifiable until runs are
+    reproducible, so seeds, pinned versions and tracking are the whole answer.
+    Modelling entries are not the problem being reported.
+  project:
+    title: Comparative Study of Classifiers for Text Categorisation
+    domain: natural language processing
+    problem: >-
+      Comparing five classifiers across three text datasets and reporting
+      which performs best.
+    algorithms: [SVM, naive bayes, random forest, logistic regression, KNN]
+    libraries: [scikit-learn, NLTK]
+    metrics: [accuracy, F1]
+    limitations: []
+  findings:
+    - rule_id: no-reproducibility-controls
+      category: reproducibility
+      severity: medium
+      title: No random seed or reproducibility control
+    - rule_id: unversioned-dependencies
+      category: dependencies
+      severity: low
+      title: Library versions are not recorded
+  judgments:
+    seed-everything: 3
+    pin-dependencies-with-a-lock-file: 3
+    track-experiments: 3
+    document-dataset-provenance: 2
+    nested-cv-for-tuning: 2
+    stratified-k-fold-cross-validation: 2
+    containerise-the-service: 2
+    serve-behind-an-api: 0
+
+- id: object-detection-tuned-on-test
+  title: Object detector with hyperparameters tuned on the evaluation set
+  rationale: >-
+    Searching many configurations and reporting the best on the same data is
+    the specific problem, so separating tuning from final evaluation is the
+    direct fix, with experiment tracking as the practical support for it.
+    The project already has GPU access, so nothing is excluded on hardware.
+  project:
+    title: Real Time Object Detection for Traffic Monitoring
+    domain: computer vision
+    problem: >-
+      Detecting and counting vehicles in traffic camera footage, trained on an
+      NVIDIA GPU with CUDA over 50,000 annotated frames.
+    algorithms: [YOLO, CNN]
+    libraries: [PyTorch, OpenCV]
+    metrics: [mean average precision]
+    limitations: [Hyperparameters were selected using the test set.]
+  findings:
+    - rule_id: single-split-only
+      category: evaluation
+      severity: high
+      title: Evaluated on a single train/test split
+    - category: data_leakage
+      severity: high
+      title: Hyperparameters were selected on the evaluation data
+  judgments:
+    nested-cv-for-tuning: 3
+    track-experiments: 3
+    stratified-k-fold-cross-validation: 2
+    error-analysis-pass: 2
+    check-duplicate-and-near-duplicate-rows: 2
+    pipeline-to-prevent-leakage: 2
+    seed-everything: 2
+    class-weighting-before-resampling: 0

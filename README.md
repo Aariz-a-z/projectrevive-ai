@@ -174,6 +174,27 @@ All settings come from the environment. See `backend/.env.example`.
 | Sentence Transformers | Pluggable embedder, TF-IDF default | PyTorch does not fit a free backend host. TF-IDF also serves as the content-only baseline the evaluation plan requires. |
 | Server-side PDF export | Markdown + print-ready HTML | Avoids a heavy PDF toolchain; browsers already print to PDF. |
 
+## Measured quality
+
+```bash
+cd backend && ./.venv/Scripts/python.exe -m eval.run_eval
+```
+
+Ranking quality against a labelled set of 10 cases, hybrid versus two
+ablations. **The rules-only baseline currently beats the hybrid at the top of
+the ranking** (P@3 0.733 vs 0.700, NDCG@3 0.746 vs 0.736); the hybrid leads on
+recall (0.699 vs 0.628). Content similarity trades top-of-list precision for
+coverage, and on this set that trade is not yet worth it at K=3.
+
+That result is reported rather than tuned away — with 10 cases there is no
+honest train/test split, so fitting the weights to this set and reporting the
+improvement would be reporting the fit. Full numbers, caveats and the reason
+the P@10 column is misleading are in [`backend/eval/README.md`](backend/eval/README.md).
+
+The labels were written by one person, who also wrote the knowledge base being
+scored, so the numbers are biased upward and are not evidence of performance
+for anyone else.
+
 ## The knowledge base
 
 `backend/app/knowledge/kb/*.yaml` holds the candidate improvements. It is
@@ -228,7 +249,10 @@ must display.
 - [x] **Phase 2** — weakness and gap analysis, rules plus model
 - [x] **Phase 3** — hybrid recommendation engine and knowledge base
 - [ ] **Phase 4** — stack comparison, Mermaid architecture, roadmap, export
-- [ ] **Phase 5** — evaluation harness vs. baselines, accessibility
+- [x] **Evaluation harness** — precision@K, NDCG@K, coverage, hybrid against
+      two ablations, with the result reported as measured
+- [ ] **Phase 5** — accessibility pass, more evaluation cases from a second
+      annotator
 - [ ] **Phase 6** — deployment
 
 ## Licence

@@ -1,0 +1,346 @@
+{
+  "cases": 10,
+  "catalogue_size": 22,
+  "cutoffs": [
+    3,
+    5,
+    10
+  ],
+  "results": {
+    "hybrid": {
+      "metrics": {
+        "P@3": 0.7,
+        "NDCG@3": 0.7362631459920751,
+        "P@5": 0.52,
+        "NDCG@5": 0.6791358228185378,
+        "P@10": 0.42000000000000004,
+        "NDCG@10": 0.7420177914687415,
+        "Recall@10": 0.699047619047619,
+        "Coverage@10": 1.0,
+        "Items": 8.9
+      },
+      "rankings": {
+        "fraud-detection-imbalanced": [
+          "class-weighting-before-resampling",
+          "per-class-classification-report",
+          "precision-recall-curve-for-imbalance",
+          "choose-a-metric-that-matches-the-task",
+          "add-simple-baseline",
+          "resample-inside-folds",
+          "stratified-k-fold-cross-validation",
+          "pipeline-to-prevent-leakage",
+          "seed-everything",
+          "document-dataset-provenance"
+        ],
+        "digit-recognition-single-split": [
+          "stratified-k-fold-cross-validation",
+          "choose-a-metric-that-matches-the-task",
+          "add-simple-baseline",
+          "pipeline-to-prevent-leakage",
+          "per-class-classification-report",
+          "resample-inside-folds",
+          "precision-recall-curve-for-imbalance",
+          "check-duplicate-and-near-duplicate-rows",
+          "learning-curves-for-data-sufficiency",
+          "nested-cv-for-tuning"
+        ],
+        "sentiment-no-baseline": [
+          "add-simple-baseline",
+          "per-class-classification-report",
+          "class-weighting-before-resampling",
+          "pipeline-to-prevent-leakage",
+          "precision-recall-curve-for-imbalance",
+          "error-analysis-pass",
+          "monitor-inputs-after-deployment"
+        ],
+        "medical-imaging-explainability": [
+          "per-class-classification-report",
+          "permutation-importance-first",
+          "choose-a-metric-that-matches-the-task",
+          "precision-recall-curve-for-imbalance",
+          "stratified-k-fold-cross-validation",
+          "document-dataset-provenance",
+          "learning-curves-for-data-sufficiency"
+        ],
+        "churn-prediction-no-deployment": [
+          "test-the-data-pipeline",
+          "serve-behind-an-api",
+          "containerise-the-service",
+          "add-simple-baseline",
+          "pipeline-to-prevent-leakage",
+          "precision-recall-curve-for-imbalance",
+          "per-class-classification-report",
+          "validate-and-bound-api-input",
+          "learning-curves-for-data-sufficiency",
+          "monitor-inputs-after-deployment"
+        ],
+        "tiny-dataset-overfitting": [
+          "stratified-k-fold-cross-validation",
+          "seed-everything",
+          "choose-a-metric-that-matches-the-task",
+          "add-simple-baseline",
+          "per-class-classification-report",
+          "check-duplicate-and-near-duplicate-rows",
+          "error-analysis-pass",
+          "track-experiments",
+          "learning-curves-for-data-sufficiency",
+          "document-dataset-provenance"
+        ],
+        "movie-recommender-no-validation": [
+          "choose-a-metric-that-matches-the-task",
+          "stratified-k-fold-cross-validation",
+          "pipeline-to-prevent-leakage",
+          "add-simple-baseline",
+          "per-class-classification-report",
+          "error-analysis-pass",
+          "resample-inside-folds",
+          "nested-cv-for-tuning",
+          "learning-curves-for-data-sufficiency",
+          "seed-everything"
+        ],
+        "energy-forecast-random-split": [
+          "resample-inside-folds",
+          "pipeline-to-prevent-leakage",
+          "check-duplicate-and-near-duplicate-rows",
+          "document-dataset-provenance",
+          "nested-cv-for-tuning",
+          "test-the-data-pipeline"
+        ],
+        "research-irreproducible": [
+          "seed-everything",
+          "add-simple-baseline",
+          "pin-dependencies-with-a-lock-file",
+          "per-class-classification-report",
+          "pipeline-to-prevent-leakage",
+          "test-the-data-pipeline",
+          "document-dataset-provenance",
+          "containerise-the-service",
+          "track-experiments"
+        ],
+        "object-detection-tuned-on-test": [
+          "stratified-k-fold-cross-validation",
+          "pipeline-to-prevent-leakage",
+          "resample-inside-folds",
+          "choose-a-metric-that-matches-the-task",
+          "check-duplicate-and-near-duplicate-rows",
+          "add-simple-baseline",
+          "nested-cv-for-tuning",
+          "per-class-classification-report",
+          "learning-curves-for-data-sufficiency",
+          "precision-recall-curve-for-imbalance"
+        ]
+      }
+    },
+    "rules-only": {
+      "metrics": {
+        "P@3": 0.7333333333333333,
+        "NDCG@3": 0.7464624122111236,
+        "P@5": 0.6,
+        "NDCG@5": 0.7258068649627377,
+        "P@10": 0.37,
+        "NDCG@10": 0.7382415946465224,
+        "Recall@10": 0.6276190476190476,
+        "Coverage@10": 1.0,
+        "Items": 5.9
+      },
+      "rankings": {
+        "fraud-detection-imbalanced": [
+          "class-weighting-before-resampling",
+          "per-class-classification-report",
+          "resample-inside-folds",
+          "precision-recall-curve-for-imbalance",
+          "choose-a-metric-that-matches-the-task"
+        ],
+        "digit-recognition-single-split": [
+          "stratified-k-fold-cross-validation",
+          "choose-a-metric-that-matches-the-task",
+          "add-simple-baseline",
+          "nested-cv-for-tuning",
+          "error-analysis-pass",
+          "learning-curves-for-data-sufficiency",
+          "track-experiments"
+        ],
+        "sentiment-no-baseline": [
+          "add-simple-baseline"
+        ],
+        "medical-imaging-explainability": [
+          "per-class-classification-report",
+          "permutation-importance-first",
+          "choose-a-metric-that-matches-the-task",
+          "precision-recall-curve-for-imbalance"
+        ],
+        "churn-prediction-no-deployment": [
+          "serve-behind-an-api",
+          "test-the-data-pipeline",
+          "containerise-the-service",
+          "validate-and-bound-api-input",
+          "monitor-inputs-after-deployment"
+        ],
+        "tiny-dataset-overfitting": [
+          "stratified-k-fold-cross-validation",
+          "choose-a-metric-that-matches-the-task",
+          "add-simple-baseline",
+          "nested-cv-for-tuning",
+          "seed-everything",
+          "error-analysis-pass",
+          "learning-curves-for-data-sufficiency",
+          "track-experiments",
+          "test-the-data-pipeline",
+          "containerise-the-service"
+        ],
+        "movie-recommender-no-validation": [
+          "stratified-k-fold-cross-validation",
+          "choose-a-metric-that-matches-the-task",
+          "add-simple-baseline",
+          "nested-cv-for-tuning",
+          "error-analysis-pass",
+          "learning-curves-for-data-sufficiency",
+          "track-experiments"
+        ],
+        "energy-forecast-random-split": [
+          "pipeline-to-prevent-leakage",
+          "resample-inside-folds",
+          "check-duplicate-and-near-duplicate-rows",
+          "nested-cv-for-tuning"
+        ],
+        "research-irreproducible": [
+          "seed-everything",
+          "containerise-the-service",
+          "pin-dependencies-with-a-lock-file",
+          "test-the-data-pipeline",
+          "track-experiments",
+          "document-dataset-provenance"
+        ],
+        "object-detection-tuned-on-test": [
+          "stratified-k-fold-cross-validation",
+          "pipeline-to-prevent-leakage",
+          "resample-inside-folds",
+          "choose-a-metric-that-matches-the-task",
+          "add-simple-baseline",
+          "check-duplicate-and-near-duplicate-rows",
+          "nested-cv-for-tuning",
+          "error-analysis-pass",
+          "learning-curves-for-data-sufficiency",
+          "track-experiments"
+        ]
+      }
+    },
+    "content-only": {
+      "metrics": {
+        "P@3": 0.3,
+        "NDCG@3": 0.1965721869281038,
+        "P@5": 0.28,
+        "NDCG@5": 0.22276286956486668,
+        "P@10": 0.26,
+        "NDCG@10": 0.3231829341187435,
+        "Recall@10": 0.44523809523809527,
+        "Coverage@10": 0.8636363636363636,
+        "Items": 8.1
+      },
+      "rankings": {
+        "fraud-detection-imbalanced": [
+          "add-simple-baseline",
+          "document-dataset-provenance",
+          "learning-curves-for-data-sufficiency",
+          "pipeline-to-prevent-leakage",
+          "seed-everything",
+          "containerise-the-service",
+          "resample-inside-folds",
+          "per-class-classification-report",
+          "test-the-data-pipeline",
+          "stratified-k-fold-cross-validation"
+        ],
+        "digit-recognition-single-split": [
+          "per-class-classification-report",
+          "precision-recall-curve-for-imbalance",
+          "stratified-k-fold-cross-validation",
+          "pipeline-to-prevent-leakage",
+          "resample-inside-folds",
+          "nested-cv-for-tuning",
+          "seed-everything",
+          "learning-curves-for-data-sufficiency",
+          "document-dataset-provenance",
+          "check-duplicate-and-near-duplicate-rows"
+        ],
+        "sentiment-no-baseline": [
+          "per-class-classification-report",
+          "error-analysis-pass",
+          "precision-recall-curve-for-imbalance",
+          "class-weighting-before-resampling",
+          "pipeline-to-prevent-leakage"
+        ],
+        "medical-imaging-explainability": [
+          "learning-curves-for-data-sufficiency",
+          "per-class-classification-report",
+          "document-dataset-provenance",
+          "serve-behind-an-api",
+          "stratified-k-fold-cross-validation",
+          "add-simple-baseline",
+          "test-the-data-pipeline"
+        ],
+        "churn-prediction-no-deployment": [
+          "add-simple-baseline",
+          "pipeline-to-prevent-leakage",
+          "precision-recall-curve-for-imbalance",
+          "containerise-the-service",
+          "learning-curves-for-data-sufficiency",
+          "per-class-classification-report",
+          "serve-behind-an-api",
+          "test-the-data-pipeline",
+          "permutation-importance-first",
+          "resample-inside-folds"
+        ],
+        "tiny-dataset-overfitting": [
+          "per-class-classification-report",
+          "document-dataset-provenance",
+          "serve-behind-an-api",
+          "check-duplicate-and-near-duplicate-rows",
+          "track-experiments",
+          "seed-everything",
+          "stratified-k-fold-cross-validation",
+          "add-simple-baseline",
+          "test-the-data-pipeline"
+        ],
+        "movie-recommender-no-validation": [
+          "per-class-classification-report",
+          "pipeline-to-prevent-leakage",
+          "seed-everything",
+          "resample-inside-folds"
+        ],
+        "energy-forecast-random-split": [
+          "document-dataset-provenance",
+          "test-the-data-pipeline",
+          "add-simple-baseline",
+          "learning-curves-for-data-sufficiency",
+          "resample-inside-folds",
+          "monitor-inputs-after-deployment",
+          "nested-cv-for-tuning",
+          "check-duplicate-and-near-duplicate-rows",
+          "pipeline-to-prevent-leakage"
+        ],
+        "research-irreproducible": [
+          "add-simple-baseline",
+          "per-class-classification-report",
+          "pipeline-to-prevent-leakage",
+          "seed-everything",
+          "check-duplicate-and-near-duplicate-rows",
+          "test-the-data-pipeline",
+          "resample-inside-folds"
+        ],
+        "object-detection-tuned-on-test": [
+          "precision-recall-curve-for-imbalance",
+          "per-class-classification-report",
+          "nested-cv-for-tuning",
+          "stratified-k-fold-cross-validation",
+          "monitor-inputs-after-deployment",
+          "pipeline-to-prevent-leakage",
+          "serve-behind-an-api",
+          "test-the-data-pipeline",
+          "add-simple-baseline",
+          "resample-inside-folds"
+        ]
+      }
+    }
+  },
+  "limitations": "HOW TO READ THESE NUMBERS\n\n  - 10 cases. That is small enough that one case moving a few places visibly\n    shifts every mean. Treat differences under roughly 0.05 as noise.\n  - One annotator, who is also the author of the knowledge base being scored.\n    The labels and the system share assumptions, so these numbers are biased\n    upward and are not evidence of how the system performs for anyone else.\n  - No inter-annotator agreement, because there is no second annotator.\n  - The evaluation supplies project profiles directly, so nothing here\n    measures document extraction. A good score is about ranking only.\n  - Relevance is a judgement about appropriateness, not an observed outcome.\n    No recommendation here has been implemented and measured.\n\nThese are measurements of a ranking against one person's opinion. They are\nnot evidence that following the recommendations improves a project."
+}

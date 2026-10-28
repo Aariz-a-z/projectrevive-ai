@@ -142,15 +142,27 @@ def _build(candidate: Candidate, breakdown, feasibility) -> Recommendation:
 def recommend(
     profile: ProjectProfile,
     findings: list[Finding],
-    document: ExtractedDocument,
+    document: ExtractedDocument | None = None,
     *,
     embedder_name: str = "tfidf",
     weights: Weights | None = None,
     constraints: UserConstraints | None = None,
     limit: int = DEFAULT_LIMIT,
 ) -> RecommendationReport:
+    """Rank knowledge base entries for this project.
+
+    `document` is only needed to infer constraints. Callers that already know
+    the constraints -- the evaluation harness, or a future UI that asks the
+    user -- pass them directly and omit it.
+    """
     weights = weights or Weights()
-    constraints = constraints or infer_constraints(profile, document)
+    if constraints is None:
+        if document is None:
+            raise ValueError(
+                "recommend() needs either a document to infer constraints "
+                "from, or explicit constraints"
+            )
+        constraints = infer_constraints(profile, document)
     entries = load_knowledge_base()
     embedder = get_embedder(embedder_name)
 
