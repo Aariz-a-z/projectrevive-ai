@@ -1,0 +1,299 @@
+# Evaluation, validation and metrics.
+#
+# `impact` is a hand-assigned estimate of how much the change improves the
+# trustworthiness of the project's conclusions. It is not measured.
+
+- id: stratified-k-fold-cross-validation
+  title: Replace the single split with stratified k-fold cross-validation
+  category: evaluation
+  addresses_rules: [single-split-only, no-validation-strategy]
+  addresses_categories: [evaluation]
+  keywords: [cross validation, k-fold, stratified, variance, overfitting, holdout]
+  problem: >-
+    The reported score comes from one train/test split, so it reflects which
+    rows happened to land in the test set as much as it reflects the model.
+  current_approach: A single train/test split, evaluated once.
+  proposed_approach: >-
+    Evaluate with stratified k-fold cross-validation (k=5 or 10) and report the
+    mean and standard deviation across folds rather than a single number.
+    Stratification keeps each fold's class balance close to the full dataset.
+  reason: >-
+    A single split gives one sample of the model's performance with no sense of
+    its variance. On a small dataset the spread between folds is often larger
+    than the improvement being claimed, which means a single number cannot
+    support the conclusion drawn from it.
+  expected_benefits:
+    - A performance estimate with a stated spread rather than one point
+    - Every row is used for both training and validation across the folds
+    - Makes genuine improvements distinguishable from split luck
+  trade_offs:
+    - Training time multiplies by k
+    - Harder to point at a single headline number in a report
+    - Leaks into the model-selection process if the same folds pick hyperparameters and report the final score
+  implementation_steps:
+    - Replace train_test_split with StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+    - Collect the metric per fold instead of once
+    - Report mean plus or minus standard deviation
+    - Keep a final held-out test set if hyperparameters are also being tuned
+  validation_method: >-
+    Compare the per-fold spread against the improvement you previously claimed.
+    If the spread is wider, the original single-split number was not evidence.
+  dependencies: [scikit-learn]
+  complexity: low
+  cost: none
+  skill_level: beginner
+  impact: 0.9
+
+- id: per-class-classification-report
+  title: Report per-class precision, recall and F1 instead of accuracy alone
+  category: metric_suitability
+  addresses_rules: [accuracy-without-class-metrics]
+  addresses_categories: [metric_suitability, class_imbalance]
+  keywords: [precision, recall, f1, classification report, per class, confusion matrix]
+  problem: >-
+    Accuracy aggregates over all classes, so a model that fails entirely on a
+    minority class can still report a high number.
+  current_approach: A single overall accuracy figure.
+  proposed_approach: >-
+    Produce a full classification report with precision, recall and F1 per
+    class, alongside a confusion matrix, and discuss the weakest class rather
+    than the average.
+  reason: >-
+    The useful question is almost never "how often is it right overall" but
+    "which cases does it get wrong, and does that matter". Only per-class
+    numbers answer that, and they usually change which model you would pick.
+  expected_benefits:
+    - Shows which classes the model actually fails on
+    - Makes the cost of each error type visible
+    - Comparable across models in a way accuracy is not under imbalance
+  trade_offs:
+    - More numbers to interpret and explain
+    - Encourages optimising one class at another's expense without a stated priority
+  implementation_steps:
+    - Call classification_report(y_true, y_pred) and include the output
+    - Plot a confusion matrix, normalised by true label
+    - State explicitly which class matters most for the use case and why
+  validation_method: >-
+    Check whether the lowest per-class recall is acceptable for the intended
+    use. If it is not, the overall accuracy was hiding a real failure.
+  dependencies: [scikit-learn]
+  complexity: low
+  cost: none
+  skill_level: beginner
+  impact: 0.75
+
+- id: add-simple-baseline
+  title: Add a simple baseline to compare against
+  category: baseline
+  addresses_rules: [no-baseline-comparison]
+  addresses_categories: [baseline, evaluation]
+  keywords: [baseline, dummy classifier, logistic regression, comparison, ablation]
+  problem: >-
+    Only one approach appears in the report, so there is nothing showing the
+    chosen method was necessary.
+  current_approach: A single model, reported on its own.
+  proposed_approach: >-
+    Add two reference points: a trivial baseline (majority class or
+    DummyClassifier) and one simple real model such as logistic regression or
+    a small decision tree. Report all three on the same split.
+  reason: >-
+    A score only means something relative to an alternative. A deep model that
+    beats the majority-class baseline by two points on an imbalanced dataset
+    has probably not learned what the report claims it learned.
+  expected_benefits:
+    - Turns a bare score into evidence that the complexity was warranted
+    - Often reveals the problem is easier or harder than assumed
+    - Costs very little time compared to the model already built
+  trade_offs:
+    - May show the complex model was not worth it, which is awkward to write up
+    - Adds a little training and reporting work
+  implementation_steps:
+    - Fit DummyClassifier(strategy="most_frequent") and record its score
+    - Fit one simple interpretable model on the same features and split
+    - Put all models in one comparison table using identical metrics
+  validation_method: >-
+    If the complex model does not clearly beat the simple one, that is the
+    finding worth reporting.
+  dependencies: [scikit-learn]
+  complexity: low
+  cost: none
+  skill_level: beginner
+  impact: 0.8
+
+- id: precision-recall-curve-for-imbalance
+  title: Use precision-recall curves rather than ROC under heavy imbalance
+  category: metric_suitability
+  addresses_categories: [metric_suitability, class_imbalance]
+  keywords: [pr-auc, precision recall curve, roc auc, imbalance, threshold]
+  problem: >-
+    ROC-AUC stays optimistic when the negative class dominates, because the
+    false positive rate changes slowly against a very large denominator.
+  current_approach: ROC-AUC, or a single thresholded metric.
+  proposed_approach: >-
+    Report average precision (PR-AUC) and show the precision-recall curve, then
+    choose the operating threshold from that curve against a stated requirement.
+  reason: >-
+    Under imbalance, PR curves reflect the trade-off that actually matters:
+    how much precision is lost to gain recall on the rare class.
+  expected_benefits:
+    - A metric that degrades honestly as imbalance worsens
+    - Makes threshold choice explicit rather than leaving it at 0.5
+  trade_offs:
+    - Less familiar to readers than ROC-AUC
+    - Not comparable across datasets with different base rates
+  implementation_steps:
+    - Compute average_precision_score alongside the existing metric
+    - Plot precision_recall_curve for the positive class
+    - State the required precision or recall, then pick the threshold from the curve
+  validation_method: >-
+    Check whether the chosen threshold meets the stated requirement on a
+    held-out set, not on the set used to pick it.
+  dependencies: [scikit-learn, matplotlib]
+  complexity: low
+  cost: none
+  skill_level: intermediate
+  impact: 0.6
+
+- id: learning-curves-for-data-sufficiency
+  title: Plot learning curves to find out whether more data would help
+  category: evaluation
+  addresses_categories: [evaluation]
+  keywords: [learning curve, sample size, bias variance, underfitting, overfitting]
+  problem: >-
+    The report does not establish whether performance is limited by the model,
+    the features, or simply the amount of data available.
+  current_approach: A single score at the full dataset size.
+  proposed_approach: >-
+    Train on increasing fractions of the data and plot training and validation
+    score against sample size.
+  reason: >-
+    The shape of the curve answers a question no single score can: a validation
+    score still climbing at full size means more data is the cheapest
+    improvement available, while a flat curve means it is not.
+  expected_benefits:
+    - Directs effort at the actual bottleneck instead of guessing
+    - Distinguishes underfitting from overfitting with evidence
+  trade_offs:
+    - Requires repeated training runs
+    - Noisy on small datasets unless each point is averaged over folds
+  implementation_steps:
+    - Use sklearn.model_selection.learning_curve with your CV splitter
+    - Plot train and validation scores against training set size
+    - Read off whether the validation curve has plateaued
+  validation_method: >-
+    If the curve is still rising, collect or augment more data and confirm the
+    predicted gain appears.
+  dependencies: [scikit-learn, matplotlib]
+  complexity: medium
+  cost: low
+  skill_level: intermediate
+  impact: 0.55
+
+- id: nested-cv-for-tuning
+  title: Separate hyperparameter tuning from final evaluation
+  category: evaluation
+  addresses_categories: [evaluation, data_leakage]
+  keywords: [nested cross validation, hyperparameter, grid search, optimistic bias, tuning]
+  problem: >-
+    When the same data chooses hyperparameters and reports the final score,
+    that score is optimistic by an unknown amount.
+  current_approach: Tuning and reporting on the same split or the same folds.
+  proposed_approach: >-
+    Use nested cross-validation, or hold out a final test set that is touched
+    exactly once after all tuning decisions are made.
+  reason: >-
+    Hyperparameter search is itself a form of fitting. Selecting the best of
+    fifty configurations on the evaluation data means the reported number
+    includes the luck of that selection.
+  expected_benefits:
+    - A final number that is not inflated by the search
+    - Makes the size of the tuning gain visible
+  trade_offs:
+    - Training cost multiplies by the inner fold count
+    - More moving parts to explain and get right
+  implementation_steps:
+    - Wrap the search in an outer CV loop, or split off a final test set first
+    - Run all tuning inside the inner loop only
+    - Report both the tuned inner score and the untouched outer score
+  validation_method: >-
+    Compare the tuned score with the held-out score. A large gap is the
+    optimism you were previously reporting.
+  dependencies: [scikit-learn]
+  complexity: medium
+  cost: low
+  skill_level: advanced
+  impact: 0.65
+
+- id: error-analysis-pass
+  title: Do a structured error analysis on the worst cases
+  category: evaluation
+  addresses_categories: [evaluation, feature_engineering]
+  keywords: [error analysis, misclassification, qualitative, failure cases]
+  problem: >-
+    Aggregate metrics say how often the model is wrong but never why, so there
+    is nothing to act on.
+  current_approach: Metrics only, with no inspection of individual failures.
+  proposed_approach: >-
+    Take a sample of the worst errors, group them by apparent cause, and
+    report the categories with counts.
+  reason: >-
+    Error categories usually point at a concrete fix such as a labelling
+    problem or a missing feature, which a metric never does. It is also the
+    cheapest analysis available.
+  expected_benefits:
+    - Turns a score into a list of specific, actionable problems
+    - Frequently uncovers label noise that caps achievable performance
+  trade_offs:
+    - Manual and time-consuming
+    - Subjective unless the categories are defined before looking
+  implementation_steps:
+    - Sort validation predictions by loss or confidence and take the worst 50
+    - Label each with a short cause, defining categories as you go
+    - Count the categories and report the top three with examples
+  validation_method: >-
+    Fix the largest category and confirm that specific error type drops in the
+    next evaluation.
+  dependencies: []
+  complexity: medium
+  cost: none
+  skill_level: intermediate
+  impact: 0.6
+
+- id: choose-a-metric-that-matches-the-task
+  title: Choose and report a metric that matches the decision being made
+  category: evaluation
+  addresses_rules: [no-evaluation-metrics]
+  addresses_categories: [evaluation, metric_suitability]
+  keywords: [metric, evaluation, objective, measurement, scoring]
+  problem: >-
+    No evaluation metric is reported, so there is no way to tell whether the
+    model works or to compare it against anything.
+  current_approach: Results described qualitatively, or not at all.
+  proposed_approach: >-
+    Pick one primary metric tied to the decision the model supports, state why
+    it was chosen, and report it consistently for every model and experiment.
+    Keep secondary metrics, but name the primary one first.
+  reason: >-
+    Without a stated metric, every claim about performance is unfalsifiable
+    and no two experiments in the report can be compared. Choosing the metric
+    before running experiments also prevents picking the flattering one after.
+  expected_benefits:
+    - Makes performance claims checkable rather than rhetorical
+    - Allows experiments to be compared against each other
+    - Choosing it up front removes the temptation to select it afterwards
+  trade_offs:
+    - A single primary metric always hides some failure mode
+    - The right metric depends on costs that may not be known yet
+  implementation_steps:
+    - Write down what decision the model's output supports
+    - Choose the metric whose errors map onto the cost of that decision
+    - State the choice and the reason before running experiments
+    - Report it for every model, including the baseline
+  validation_method: >-
+    Ask whether a change in the metric would change the decision. If it would
+    not, it is the wrong metric.
+  dependencies: [scikit-learn]
+  complexity: low
+  cost: none
+  skill_level: beginner
+  impact: 0.85

@@ -24,8 +24,10 @@ from app.schemas.api import (
     AnalysisSummary,
     UsageInfo,
 )
+from app.recommend.engine import recommend
 from app.schemas.findings import FindingsReport
 from app.schemas.project import ProjectProfile
+from app.schemas.recommendation import RecommendationReport
 
 router = APIRouter(prefix="/analyses", tags=["analyses"])
 
@@ -67,6 +69,7 @@ def _provenance(row: Analysis) -> AnalysisProvenance:
 def _to_detail(row: Analysis) -> AnalysisDetail:
     profile = ProjectProfile.model_validate(row.profile)
     findings = FindingsReport.model_validate(row.findings or {})
+    recommendations = RecommendationReport.model_validate(row.recommendations or {})
     return AnalysisDetail(
         id=row.id,
         created_at=row.created_at,
@@ -78,6 +81,7 @@ def _to_detail(row: Analysis) -> AnalysisDetail:
         provenance=_provenance(row),
         profile=profile,
         findings=findings,
+        recommendations=recommendations,
         claim_counts=profile.counts_by_source(),
         finding_counts=findings.by_severity(),
         finding_sources=findings.counts_by_source(),
@@ -110,6 +114,12 @@ async def create_analysis(
 
     result = build_profile(document, provider)
     gaps = analyse_gaps(result.parsed, document, provider)
+    advice = recommend(
+        result.parsed,
+        gaps.parsed.findings,
+        document,
+        embedder_name=settings.embedder,
+    )
 
     row = Analysis(
         id=uuid.uuid4().hex,
@@ -128,6 +138,7 @@ async def create_analysis(
         ),
         profile=result.parsed.model_dump(mode="json"),
         findings=gaps.parsed.model_dump(mode="json"),
+        recommendations=advice.model_dump(mode="json"),
         warnings=[*result.warnings, *gaps.warnings],
     )
     db.add(row)

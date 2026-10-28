@@ -82,6 +82,7 @@ export interface AnalysisDetail extends AnalysisSummary {
   content_type: string;
   profile: ProjectProfile;
   findings: FindingsReport;
+  recommendations: RecommendationReport;
   claim_counts: { total: number; stated: number; inferred: number };
   finding_counts: { high: number; medium: number; low: number };
   finding_sources: { total: number; rule: number; model: number };
@@ -108,6 +109,60 @@ export interface Finding {
 export interface FindingsReport {
   findings: Finding[];
   notes: string[];
+}
+
+export type Complexity = "low" | "medium" | "high";
+export type CostBand = "none" | "low" | "medium" | "high";
+export type SkillLevel = "beginner" | "intermediate" | "advanced";
+export type MatchedBy = "knowledge" | "content" | "both";
+
+export interface ScoreBreakdown {
+  relevance: number;
+  feasibility: number;
+  expected_impact: number;
+  effort_penalty: number;
+  cost_penalty: number;
+  weights: Record<string, number>;
+  final: number;
+}
+
+export interface Recommendation {
+  id: string;
+  title: string;
+  problem_addressed: string;
+  current_approach: string;
+  proposed_approach: string;
+  reason: string;
+  evidence: Evidence[];
+  addresses_findings: string[];
+  expected_benefits: string[];
+  trade_offs: string[];
+  complexity: Complexity;
+  cost: CostBand;
+  skill_level: SkillLevel;
+  dependencies: string[];
+  implementation_steps: string[];
+  validation_method: string;
+  matched_by: MatchedBy;
+  score: ScoreBreakdown;
+  constraint_notes: string[];
+}
+
+export interface UserConstraints {
+  has_gpu: boolean;
+  dataset_rows: number | null;
+  skill_level: SkillLevel;
+  budget: CostBand;
+  needs_deployment: boolean;
+  assumptions: string[];
+}
+
+export interface RecommendationReport {
+  recommendations: Recommendation[];
+  weights: Record<string, number>;
+  constraints: UserConstraints;
+  notes: string[];
+  excluded: string[];
 }
 
 export interface UserPublic {

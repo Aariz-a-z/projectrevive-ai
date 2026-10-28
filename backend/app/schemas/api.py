@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 
 from app.schemas.findings import FindingsReport
 from app.schemas.project import ProjectProfile
+from app.schemas.recommendation import RecommendationReport
 
 
 class UsageInfo(BaseModel):
@@ -48,6 +49,7 @@ class AnalysisDetail(AnalysisSummary):
     content_type: str
     profile: ProjectProfile
     findings: FindingsReport
+    recommendations: RecommendationReport
     claim_counts: dict[str, int]
     finding_counts: dict[str, int] = Field(
         default_factory=dict,

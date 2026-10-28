@@ -68,4 +68,6 @@ class Analysis(Base):
     profile: Mapped[dict] = mapped_column(JSON, default=dict)
     # Merged rule and model findings, as a FindingsReport dump.
     findings: Mapped[dict] = mapped_column(JSON, default=dict)
+    # Ranked recommendations, as a RecommendationReport dump.
+    recommendations: Mapped[dict] = mapped_column(JSON, default=dict)
     warnings: Mapped[list] = mapped_column(JSON, default=list)

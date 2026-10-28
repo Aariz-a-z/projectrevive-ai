@@ -30,8 +30,19 @@ explainable improvements.
   - The **model**, for judgements the rules cannot make. Its findings go
     through the same citation verification as the profile, and a weakness whose
     quote cannot be found is dropped rather than softened.
-- A tabbed dashboard — Overview, Tech Stack, Evaluation, Findings, Evidence —
-  including an evidence view that groups every quote by the page it came from.
+- A **hybrid recommendation engine** over a curated, version-controlled
+  knowledge base of 22 improvements:
+  - **Knowledge linkage** — a rule detected a problem and an entry declares it
+    fixes that exact rule, so the recommendation cites a page of your report.
+  - **Content similarity** — TF-IDF (or sentence-transformers) against the
+    project description, for ideas no rule covers. Capped below anything a
+    finding supports, so a lexical coincidence never outranks real evidence.
+  - A **transparent score**: a weighted sum whose components and weights are
+    shown with every recommendation. Hardware a project does not have excludes
+    an entry outright rather than ranking it lower, with the reason stated.
+- A tabbed dashboard — Overview, Tech Stack, Evaluation, Findings,
+  Recommendations, Evidence — including an evidence view that groups every
+  quote by the page it came from.
 - **Every finding is labelled** as either stated in the report, with a page
   citation and verbatim quote you can open and check, or inferred, with the
   reasoning shown.
@@ -163,6 +174,26 @@ All settings come from the environment. See `backend/.env.example`.
 | Sentence Transformers | Pluggable embedder, TF-IDF default | PyTorch does not fit a free backend host. TF-IDF also serves as the content-only baseline the evaluation plan requires. |
 | Server-side PDF export | Markdown + print-ready HTML | Avoids a heavy PDF toolchain; browsers already print to PDF. |
 
+## The knowledge base
+
+`backend/app/knowledge/kb/*.yaml` holds the candidate improvements. It is
+plain YAML on purpose: you can read an entry, disagree with it, and change it
+in a pull request. It is validated on load, so a malformed entry stops the
+service starting rather than failing mid-analysis.
+
+**Nothing in it is learned.** There is no interaction data, nothing was
+trained, and no recommendation came from user behaviour. Every field was
+written by hand, and `impact` in particular is a considered estimate that is
+identical for every project matching that entry. The UI says so next to the
+score.
+
+Two invariants are enforced by tests rather than convention:
+
+- every entry states at least one **trade-off** — a recommendation with no
+  stated downside is advertising, not analysis;
+- every detection rule has at least one entry that addresses it, so a rule
+  cannot report a problem the system has no answer for.
+
 ## Architecture
 
 ```
@@ -195,7 +226,7 @@ must display.
 - [x] **Real Anthropic provider** — structured outputs, refusal and truncation
       handling, prompt caching, server-side fallbacks
 - [x] **Phase 2** — weakness and gap analysis, rules plus model
-- [ ] **Phase 3** — hybrid recommendation engine and knowledge base
+- [x] **Phase 3** — hybrid recommendation engine and knowledge base
 - [ ] **Phase 4** — stack comparison, Mermaid architecture, roadmap, export
 - [ ] **Phase 5** — evaluation harness vs. baselines, accessibility
 - [ ] **Phase 6** — deployment

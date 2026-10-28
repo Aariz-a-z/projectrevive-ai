@@ -9,10 +9,12 @@ import { FindingCard } from "@/components/FindingCard";
 import {
   IconAlert,
   IconCode,
+  IconLayers,
   IconQuote,
   IconSearch,
   IconShield,
 } from "@/components/icons";
+import { RecommendationCard } from "@/components/RecommendationCard";
 import {
   Badge,
   Notice,
@@ -31,6 +33,7 @@ const TABS = [
   { id: "stack", label: "Tech Stack", icon: <IconCode /> },
   { id: "evaluation", label: "Evaluation", icon: <IconShield /> },
   { id: "findings", label: "Findings", icon: <IconAlert /> },
+  { id: "recommendations", label: "Recommendations", icon: <IconLayers /> },
   { id: "evidence", label: "Evidence", icon: <IconQuote /> },
 ] as const;
 
@@ -451,6 +454,97 @@ export function AnalysisView() {
                   {analysis.findings.notes.map((note, index) => (
                     <li key={index} className="border-l-2 border-violet pl-3">
                       {note}
+                    </li>
+                  ))}
+                </ul>
+              </Panel>
+            )}
+          </div>
+        </div>
+      )}
+
+      {tab === "recommendations" && (
+        <div className="grid gap-5 lg:grid-cols-[1.55fr_0.45fr]">
+          <Panel>
+            <PanelHeader
+              title="Ranked improvements"
+              icon={<IconLayers />}
+              accent="cyan"
+              right={
+                <Badge accent="cyan">
+                  {analysis.recommendations.recommendations.length}
+                </Badge>
+              }
+            />
+            <div className="space-y-3 p-4">
+              {analysis.recommendations.recommendations.length === 0 ? (
+                <p className="py-8 text-center text-sm text-muted">
+                  No recommendations were produced for this report.
+                </p>
+              ) : (
+                analysis.recommendations.recommendations.map((item, index) => (
+                  <RecommendationCard
+                    key={item.id}
+                    recommendation={item}
+                    rank={index + 1}
+                  />
+                ))
+              )}
+            </div>
+          </Panel>
+
+          <div className="space-y-5">
+            <Panel>
+              <PanelHeader
+                title="How this was ranked"
+                icon={<IconShield />}
+                accent="violet"
+              />
+              <div className="space-y-2 p-4 text-[11px] leading-relaxed text-muted">
+                <p className="font-mono text-fg-dim">
+                  {Object.entries(analysis.recommendations.weights)
+                    .map(([k, v]) => `${v}×${k}`)
+                    .join(" + ")}
+                </p>
+                {analysis.recommendations.notes.map((note, index) => (
+                  <p key={index}>{note}</p>
+                ))}
+              </div>
+            </Panel>
+
+            <Panel>
+              <PanelHeader
+                title="Assumptions made"
+                icon={<IconAlert />}
+                accent="amber"
+              />
+              <ul className="space-y-2 p-4 text-[11px] leading-relaxed text-muted">
+                {analysis.recommendations.constraints.assumptions.map(
+                  (item, index) => (
+                    <li key={index} className="border-l-2 border-amber pl-3">
+                      {item}
+                    </li>
+                  ),
+                )}
+              </ul>
+            </Panel>
+
+            {analysis.recommendations.excluded.length > 0 && (
+              <Panel>
+                <PanelHeader
+                  title="Ruled out"
+                  icon={<IconAlert />}
+                  accent="rose"
+                  right={
+                    <Badge accent="rose">
+                      {analysis.recommendations.excluded.length}
+                    </Badge>
+                  }
+                />
+                <ul className="space-y-2 p-4 text-[11px] leading-relaxed text-muted">
+                  {analysis.recommendations.excluded.map((item, index) => (
+                    <li key={index} className="border-l-2 border-rose pl-3">
+                      {item}
                     </li>
                   ))}
                 </ul>

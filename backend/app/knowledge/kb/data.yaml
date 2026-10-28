@@ -1,0 +1,227 @@
+# Data handling: leakage, imbalance, preprocessing and reproducibility.
+
+- id: pipeline-to-prevent-leakage
+  title: Move preprocessing inside a Pipeline so it is fitted on training folds only
+  category: data_leakage
+  addresses_rules: [resampling-before-split]
+  addresses_categories: [data_leakage, feature_engineering]
+  keywords: [pipeline, leakage, scaler, fit transform, column transformer, preprocessing]
+  problem: >-
+    Scaling, imputation or encoding fitted before the split uses statistics
+    from the test set, so the reported score includes information the model
+    would not have in practice.
+  current_approach: >-
+    Preprocessing applied to the whole dataset, then split into train and test.
+  proposed_approach: >-
+    Wrap every preprocessing step and the estimator in a scikit-learn Pipeline
+    and pass that to the cross-validator, so each step is fitted on the
+    training fold only and applied to the validation fold.
+  reason: >-
+    A scaler fitted on all the data has already seen the test distribution.
+    The effect is often small but it is always in the optimistic direction,
+    and it cannot be bounded without redoing the experiment.
+  expected_benefits:
+    - Removes a whole class of silent optimism from the reported score
+    - Makes the preprocessing reproducible as part of the model artefact
+    - The same object can be serialised and served, so training and inference cannot drift apart
+  trade_offs:
+    - Requires restructuring code that currently works
+    - Harder to inspect intermediate transformed data while debugging
+  implementation_steps:
+    - Build Pipeline([("prep", ColumnTransformer(...)), ("model", Estimator())])
+    - Pass the pipeline, not the fitted model, to cross_val_score or GridSearchCV
+    - Remove any transform applied before the split
+    - Re-run the evaluation and compare against the previous number
+  validation_method: >-
+    Compare the before and after scores. A drop is the leakage you were
+    previously reporting as performance.
+  dependencies: [scikit-learn]
+  complexity: medium
+  cost: none
+  skill_level: intermediate
+  impact: 0.9
+
+- id: class-weighting-before-resampling
+  title: Try class weights before reaching for synthetic oversampling
+  category: class_imbalance
+  addresses_rules: [class-imbalance-unaddressed]
+  addresses_categories: [class_imbalance]
+  keywords: [class weight, balanced, smote, oversampling, imbalance, cost sensitive]
+  problem: >-
+    The report acknowledges imbalanced classes but describes no handling, so
+    the model is free to optimise the majority class.
+  current_approach: Training with default, unweighted loss.
+  proposed_approach: >-
+    Set class_weight="balanced" (or pass explicit per-class weights) and
+    measure the effect before considering synthetic resampling.
+  reason: >-
+    Weighting changes the loss function without inventing data. It is one
+    parameter, it cannot leak, and it frequently recovers most of the benefit
+    that resampling would give at a fraction of the risk and complexity.
+  expected_benefits:
+    - Usually improves minority-class recall immediately
+    - No synthetic rows, so nothing can leak across the split
+    - One-line change that is trivial to revert
+  trade_offs:
+    - Typically lowers overall accuracy and majority-class precision
+    - Not supported by every estimator
+    - Does not help when the minority class has too few examples to learn from at all
+  implementation_steps:
+    - Set class_weight="balanced" on the estimator
+    - Re-evaluate with per-class recall, not accuracy
+    - Only if that is insufficient, try resampling inside the CV folds
+  validation_method: >-
+    Compare per-class recall before and after. Judge against which error type
+    is actually more costly for the use case.
+  dependencies: [scikit-learn]
+  complexity: low
+  cost: none
+  skill_level: beginner
+  impact: 0.75
+
+- id: resample-inside-folds
+  title: Apply resampling inside each cross-validation fold
+  category: data_leakage
+  addresses_rules: [resampling-before-split]
+  addresses_categories: [data_leakage, class_imbalance]
+  keywords: [smote, imblearn, resampling, fold, leakage, oversampling]
+  problem: >-
+    Resampling applied before splitting copies or synthesises rows that then
+    appear on both sides of the split, inflating the test score.
+  current_approach: Resampling the full dataset, then splitting.
+  proposed_approach: >-
+    Use imbalanced-learn's Pipeline so the resampler runs on the training
+    portion of each fold only, and never on validation data.
+  reason: >-
+    A synthetic minority point generated from a row that ends up in the test
+    set is effectively that row leaking into training. With aggressive
+    oversampling this can account for most of the apparent improvement.
+  expected_benefits:
+    - An honest estimate of what resampling actually bought
+    - Validation folds keep the real class distribution
+  trade_offs:
+    - Measured performance will usually drop, sometimes sharply
+    - Adds the imbalanced-learn dependency
+  implementation_steps:
+    - Install imbalanced-learn and import its Pipeline, not scikit-learn's
+    - Place SMOTE as a step before the estimator in that pipeline
+    - Pass the pipeline to the cross-validator
+    - Compare against the class-weighting result before keeping it
+  validation_method: >-
+    The gap between the old and new scores is the leakage. Report the new one.
+  dependencies: [imbalanced-learn, scikit-learn]
+  complexity: medium
+  cost: none
+  skill_level: intermediate
+  impact: 0.85
+
+- id: seed-everything
+  title: Fix random seeds and record the environment
+  category: reproducibility
+  addresses_rules: [no-reproducibility-controls]
+  addresses_categories: [reproducibility]
+  keywords: [random seed, random_state, determinism, reproducible, environment]
+  problem: >-
+    Initialisation, shuffling and splitting are all random, so re-running the
+    work produces a different number and the reported figure cannot be
+    confirmed by anyone, including its authors.
+  current_approach: Unseeded randomness throughout.
+  proposed_approach: >-
+    Set seeds for Python, NumPy and the framework in one place, pass
+    random_state to every splitter and estimator that takes it, and record
+    library versions alongside results.
+  reason: >-
+    Without a seed there is no way to tell a real improvement from run-to-run
+    variance, which makes every comparison in the report unfalsifiable.
+  expected_benefits:
+    - Results become reproducible and therefore checkable
+    - Model comparisons stop being confounded by random variation
+  trade_offs:
+    - A single seed can flatter or punish a model by luck, so report across several
+    - Full determinism on GPU costs speed and is not always achievable
+  implementation_steps:
+    - Write a set_seed(n) helper covering random, numpy and the framework
+    - Pass random_state explicitly to splitters and estimators
+    - Freeze dependencies with pip freeze or a lock file
+    - Report results across three seeds rather than one
+  validation_method: >-
+    Run the pipeline twice end to end and confirm the metric is identical.
+  dependencies: []
+  complexity: low
+  cost: none
+  skill_level: beginner
+  impact: 0.6
+
+- id: document-dataset-provenance
+  title: Record where the dataset came from and how it was prepared
+  category: reproducibility
+  addresses_rules: [no-dataset-provenance, no-preprocessing-described]
+  addresses_categories: [reproducibility, feature_engineering]
+  keywords: [dataset, provenance, data card, licence, preprocessing, splits]
+  problem: >-
+    Without naming the data, its version, and the preparation applied, nobody
+    can reproduce the result or judge whether the data suits the problem.
+  current_approach: The dataset is referred to informally or not at all.
+  proposed_approach: >-
+    Write a short data section covering source and licence, row and class
+    counts, the exact preprocessing in order, and how the splits were made.
+  reason: >-
+    Most irreproducible results fail at the data step rather than the model
+    step. The preparation usually affects the outcome more than the choice of
+    algorithm, so leaving it undocumented makes the work unrepeatable.
+  expected_benefits:
+    - Makes the work reproducible by someone else
+    - Surfaces licensing or consent problems before publication
+    - Often exposes an unnoticed preprocessing inconsistency
+  trade_offs:
+    - Writing time, with no effect on the metric
+    - Can reveal that the data cannot legally be shared
+  implementation_steps:
+    - State source, version or access date, and licence
+    - Give row counts and the class distribution
+    - List every preprocessing step in the order applied
+    - Describe how splits were produced and whether they are stratified
+  validation_method: >-
+    Give the section to someone else and ask them to reproduce the dataset
+    exactly from it alone.
+  dependencies: []
+  complexity: low
+  cost: none
+  skill_level: beginner
+  impact: 0.5
+
+- id: check-duplicate-and-near-duplicate-rows
+  title: Check for duplicate rows that span the train and test split
+  category: data_leakage
+  addresses_categories: [data_leakage]
+  keywords: [duplicates, near duplicate, leakage, deduplication, hashing]
+  problem: >-
+    Duplicated or near-duplicated records that land on both sides of the split
+    let the model recall answers it has already seen.
+  current_approach: No duplicate check before splitting.
+  proposed_approach: >-
+    Deduplicate before splitting, and for images or text check near-duplicates
+    with hashing or embedding similarity rather than exact equality.
+  reason: >-
+    Scraped and augmented datasets very often contain repeats. The effect is
+    the most severe form of leakage because the model can score highly without
+    generalising at all.
+  expected_benefits:
+    - Removes the strongest and most common source of inflated scores
+    - Cheap to check relative to how much it can distort results
+  trade_offs:
+    - Shrinks the dataset, sometimes noticeably
+    - Near-duplicate thresholds are judgement calls that need stating
+  implementation_steps:
+    - Count exact duplicates with a hash of the row or file
+    - For media or text, compare perceptual hashes or embeddings above a stated threshold
+    - Deduplicate before splitting, never after
+    - Report how many rows were removed
+  validation_method: >-
+    Re-run evaluation after deduplication. A large drop means the earlier
+    score was substantially memorisation.
+  dependencies: [pandas]
+  complexity: medium
+  cost: none
+  skill_level: intermediate
+  impact: 0.7

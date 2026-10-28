@@ -1,0 +1,303 @@
+# Engineering practice: explainability, testing, serving, monitoring.
+
+- id: permutation-importance-first
+  title: Start explainability with permutation importance, not SHAP
+  category: explainability
+  addresses_rules: [no-explainability]
+  addresses_categories: [explainability]
+  keywords: [permutation importance, feature importance, shap, lime, interpretability]
+  problem: >-
+    Nothing in the report explains why the model makes a given prediction, so
+    its behaviour cannot be justified or sanity-checked.
+  current_approach: No interpretability analysis.
+  proposed_approach: >-
+    Compute permutation importance on the validation set first. Reach for SHAP
+    only when per-prediction attribution is genuinely needed.
+  reason: >-
+    Permutation importance is model-agnostic, a few lines of code, and answers
+    the first question worth asking: which features actually matter. It also
+    routinely exposes leakage, when an identifier-like feature dominates.
+  expected_benefits:
+    - Often catches leakage that metrics cannot
+    - Model-agnostic, so it survives changing the estimator
+    - Far cheaper to compute and explain than SHAP
+  trade_offs:
+    - Correlated features share importance and can both look unimportant
+    - Global only, so it says nothing about an individual prediction
+    - Computed on a sample, so it carries its own variance
+  implementation_steps:
+    - Call sklearn.inspection.permutation_importance on held-out data
+    - Plot the ranked features with their spread
+    - Investigate any suspiciously dominant feature as possible leakage
+    - Add SHAP later only if individual explanations are required
+  validation_method: >-
+    Drop the lowest-importance features and confirm performance is unchanged.
+    If it is, the feature set can be simplified.
+  dependencies: [scikit-learn]
+  complexity: low
+  cost: none
+  skill_level: intermediate
+  impact: 0.6
+
+- id: test-the-data-pipeline
+  title: Add tests for the data pipeline, not just the model
+  category: testing
+  addresses_rules: [no-testing]
+  addresses_categories: [testing, reproducibility]
+  keywords: [pytest, unit test, data validation, regression test, fixtures]
+  problem: >-
+    Without tests, a change to preprocessing can silently alter results and
+    nobody finds out until the numbers are already in a report.
+  current_approach: Manual checking, or none.
+  proposed_approach: >-
+    Write tests for the parts that silently corrupt results: shapes and dtypes
+    after each transform, no NaNs where none are expected, no overlap between
+    splits, and a metric regression test on a small fixed sample.
+  reason: >-
+    Model code fails loudly; data code fails quietly and produces a plausible
+    wrong number. Tests on the data path catch the failures that matter.
+  expected_benefits:
+    - Catches split overlap and shape bugs before they reach a result
+    - Makes refactoring the pipeline safe
+    - The split-overlap test alone often finds real leakage
+  trade_offs:
+    - Up-front time that produces no immediate metric improvement
+    - Fixtures need maintaining as the schema changes
+  implementation_steps:
+    - Add pytest and a tiny fixture dataset committed to the repository
+    - Assert output shape and dtype for each transform
+    - Assert the train and test index sets do not intersect
+    - Add a regression test pinning the metric on the fixture within a tolerance
+  validation_method: >-
+    Deliberately introduce a leak or a shape bug and confirm a test fails.
+  dependencies: [pytest]
+  complexity: medium
+  cost: none
+  skill_level: intermediate
+  impact: 0.65
+
+- id: serve-behind-an-api
+  title: Expose the model behind a small HTTP API
+  category: deployment
+  addresses_rules: [no-deployment]
+  addresses_categories: [deployment]
+  keywords: [fastapi, flask, rest api, serving, inference, endpoint]
+  problem: >-
+    The work stops at a trained model in a notebook, so it cannot be used or
+    demonstrated by anyone else.
+  current_approach: Inference run manually inside a notebook.
+  proposed_approach: >-
+    Wrap the serialised pipeline in a small FastAPI service with a typed
+    request schema, a prediction endpoint and a health check.
+  reason: >-
+    An API forces the input contract to be explicit, which is usually where
+    training and inference silently diverge. It is also what makes the project
+    demonstrable rather than described.
+  expected_benefits:
+    - The project becomes usable by someone who cannot run the notebook
+    - A typed request schema catches malformed input at the boundary
+    - Makes latency measurable for the first time
+  trade_offs:
+    - Introduces a service to run, secure and keep alive
+    - The serialised model must stay compatible with the serving code
+    - Pickled artefacts are a security risk if ever loaded from untrusted sources
+  implementation_steps:
+    - Serialise the whole Pipeline, not just the estimator
+    - Define a Pydantic request model mirroring the training features exactly
+    - Add POST /predict and GET /health
+    - Assert the loaded pipeline reproduces a known prediction at startup
+  validation_method: >-
+    Send a training row to the endpoint and confirm the prediction matches the
+    offline result exactly.
+  dependencies: [fastapi, uvicorn, pydantic]
+  complexity: medium
+  cost: low
+  skill_level: intermediate
+  impact: 0.7
+
+- id: containerise-the-service
+  title: Containerise the service so the environment travels with it
+  category: deployment
+  addresses_rules: [no-deployment, unversioned-dependencies]
+  addresses_categories: [deployment, dependencies, reproducibility]
+  keywords: [docker, container, image, environment, deployment, reproducible]
+  problem: >-
+    The project runs in one specific environment that exists only on its
+    author's machine and is not written down anywhere.
+  current_approach: Local environment, assembled by hand.
+  proposed_approach: >-
+    Add a Dockerfile pinning the base image and dependency versions, and build
+    it in CI so the environment is exercised on every change.
+  reason: >-
+    Pinned versions in an image turn "it worked on my machine" into something
+    checkable. It also records the dependency versions the report is missing.
+  expected_benefits:
+    - The environment becomes explicit and reproducible
+    - Deployable to most hosts without further work
+    - Records library versions as a side effect
+  trade_offs:
+    - Another artefact to build and keep current
+    - ML images are large unless slimmed deliberately
+    - Adds a layer to debug through during development
+  implementation_steps:
+    - Pin a specific base image tag, never latest
+    - Copy a lock file and install from it rather than from loose requirements
+    - Run as a non-root user
+    - Build the image in CI so a broken environment fails fast
+  validation_method: >-
+    Build and run the image on a different machine and confirm an identical
+    prediction for the same input.
+  dependencies: [docker]
+  complexity: medium
+  cost: low
+  skill_level: intermediate
+  impact: 0.55
+
+- id: pin-dependencies-with-a-lock-file
+  title: Pin dependencies with a lock file
+  category: dependencies
+  addresses_rules: [unversioned-dependencies]
+  addresses_categories: [dependencies, reproducibility]
+  keywords: [requirements, lock file, pip freeze, versions, pinning, environment]
+  problem: >-
+    Library versions are not recorded, so the environment cannot be rebuilt and
+    it is impossible to say which releases the results were produced with.
+  current_approach: Unpinned imports, or an unversioned requirements file.
+  proposed_approach: >-
+    Generate a lock file with exact versions, commit it, and record the
+    resolved versions next to any reported result.
+  reason: >-
+    Numerical behaviour changes between releases of numpy, scikit-learn and
+    the deep learning frameworks. Without pins, an unreproducible result
+    cannot be distinguished from a genuine regression.
+  expected_benefits:
+    - The environment becomes rebuildable at any later date
+    - Makes it possible to tell whether an upgrade changed a result
+    - Enables vulnerability scanning, which needs versions to work at all
+  trade_offs:
+    - Pins must be updated deliberately or they go stale
+    - A lock file can hide an upgrade that is actually needed
+  implementation_steps:
+    - Produce a lock file with pip-tools, uv or Poetry
+    - Commit it and install from it everywhere, including CI
+    - Record the resolved versions alongside reported results
+    - Schedule a periodic review rather than upgrading ad hoc
+  validation_method: >-
+    Build a clean environment from the lock file and reproduce a known metric.
+  dependencies: []
+  complexity: low
+  cost: none
+  skill_level: beginner
+  impact: 0.45
+
+- id: track-experiments
+  title: Track experiments instead of recording results by hand
+  category: reproducibility
+  addresses_categories: [reproducibility, evaluation]
+  keywords: [mlflow, experiment tracking, logging, runs, parameters, artefacts]
+  problem: >-
+    Configurations and results are recorded in notebook output or a notes file,
+    so comparisons across runs rely on memory.
+  current_approach: Manual notes and notebook output.
+  proposed_approach: >-
+    Log parameters, metrics and artefacts per run with a tracking tool such as
+    MLflow, keeping the git commit alongside each run.
+  reason: >-
+    Reported comparisons usually span many runs over weeks. Without a record
+    tying each number to its exact configuration, the comparison cannot be
+    reconstructed or trusted.
+  expected_benefits:
+    - Every reported number can be traced to its configuration and commit
+    - Comparison tables can be generated rather than transcribed
+    - Removes a common source of accidental misreporting
+  trade_offs:
+    - Another service or local store to run and back up
+    - Logging calls clutter the training loop
+    - Overkill for a project with only a handful of runs
+  implementation_steps:
+    - Start a local MLflow tracking store
+    - Log parameters, metrics and the git commit per run
+    - Log the model and preprocessing as artefacts
+    - Generate comparison tables from the store rather than by hand
+  validation_method: >-
+    Pick an old reported number and reconstruct the exact configuration that
+    produced it from the tracking store alone.
+  dependencies: [mlflow]
+  complexity: medium
+  cost: low
+  skill_level: intermediate
+  impact: 0.5
+
+- id: monitor-inputs-after-deployment
+  title: Monitor input distributions once the model is serving
+  category: scalability
+  addresses_categories: [scalability, deployment]
+  keywords: [monitoring, drift, data drift, alerting, production, observability]
+  problem: >-
+    Once deployed there is nothing to detect the model silently degrading as
+    real inputs drift away from the training distribution.
+  current_approach: No monitoring after deployment.
+  proposed_approach: >-
+    Log input feature summaries and prediction distributions per request, and
+    alert on drift against a stored training baseline.
+  reason: >-
+    Models fail quietly in production. Accuracy cannot be measured without
+    labels, but input drift is observable immediately and is the earliest
+    available warning.
+  expected_benefits:
+    - Degradation is detected before users report it
+    - Gives a concrete signal for when to retrain
+    - The logged inputs become a labelling queue
+  trade_offs:
+    - Logging request data raises privacy obligations that must be handled
+    - Drift alerts are noisy without a carefully chosen threshold
+    - Only worth building once the model is genuinely in use
+  implementation_steps:
+    - Store summary statistics of the training features as a baseline
+    - Log per-request feature summaries, not raw personal data
+    - Compare distributions on a schedule and alert past a stated threshold
+    - Write down what action an alert triggers before enabling it
+  validation_method: >-
+    Replay deliberately shifted inputs and confirm the alert fires.
+  dependencies: []
+  complexity: high
+  cost: medium
+  skill_level: advanced
+  impact: 0.45
+
+- id: validate-and-bound-api-input
+  title: Validate and bound inputs at the service boundary
+  category: security
+  addresses_categories: [security, deployment]
+  keywords: [validation, input, security, rate limit, payload size, pydantic]
+  problem: >-
+    An inference endpoint that accepts arbitrary input will eventually be sent
+    something malformed, enormous, or hostile.
+  current_approach: Inputs trusted as received.
+  proposed_approach: >-
+    Enforce a typed schema with explicit ranges, cap payload size and request
+    rate, and never deserialise a model artefact from an untrusted source.
+  reason: >-
+    Out-of-range values produce confidently wrong predictions rather than
+    errors, and pickle-based artefacts execute code on load, which turns an
+    upload feature into remote code execution.
+  expected_benefits:
+    - Malformed input is rejected rather than silently mispredicted
+    - Bounds the resource cost of a single request
+    - Closes the deserialisation path, which is the sharpest edge here
+  trade_offs:
+    - Strict bounds reject legitimate edge cases unless chosen carefully
+    - Validation adds latency to every request
+  implementation_steps:
+    - Define per-field types and ranges in the request schema
+    - Reject payloads over an explicit size limit before parsing
+    - Rate limit per client
+    - Load model artefacts only from paths you control, never user uploads
+  validation_method: >-
+    Send out-of-range, oversized and malformed payloads and confirm each is
+    refused with a clear error rather than a prediction.
+  dependencies: [pydantic]
+  complexity: medium
+  cost: none
+  skill_level: intermediate
+  impact: 0.5
