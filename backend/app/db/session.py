@@ -26,6 +26,15 @@ SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False
 
 
 def init_db() -> None:
+    """Create tables directly from the models. **Tests only.**
+
+    This bypasses migrations, so a database built this way can differ from
+    one built by `alembic upgrade head` without anything noticing. That is
+    acceptable for a test database that is deleted afterwards, and is why
+    tests/test_migrations.py asserts the two produce the same schema.
+
+    The application uses `app.db.migrate.ensure_schema` instead.
+    """
     Base.metadata.create_all(bind=engine)
 
 

@@ -26,6 +26,11 @@ class Settings(BaseSettings):
 
     # --- Storage ---
     database_url: str = "sqlite:///./projectrevive.db"
+    # Bring the database to head on startup. Turn off where several instances
+    # start at once (concurrent migrations race) or where schema changes must
+    # be a deliberate deploy step; the app then refuses to start unless the
+    # database is already at head.
+    auto_migrate: bool = True
 
     # --- Auth ---
     # Leave SECRET_KEY unset in development: a random key is generated and

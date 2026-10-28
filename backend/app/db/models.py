@@ -10,12 +10,28 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, DateTime, ForeignKey, Integer, MetaData, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+# Deterministic constraint names.
+#
+# Without this, SQLAlchemy lets the database invent names for indexes, unique
+# constraints and foreign keys. Alembic then cannot write a migration that
+# drops or alters one, because it has no name to refer to -- and on SQLite,
+# where altering a column means rebuilding the table, that failure is
+# guaranteed rather than theoretical. Set before the first migration, since
+# changing it later renames every existing constraint.
+NAMING_CONVENTION = {
+    "ix": "ix_%(table_name)s_%(column_0_name)s",
+    "uq": "uq_%(table_name)s_%(column_0_name)s",
+    "ck": "ck_%(table_name)s_%(constraint_name)s",
+    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+    "pk": "pk_%(table_name)s",
+}
 
 
 class Base(DeclarativeBase):
-    pass
+    metadata = MetaData(naming_convention=NAMING_CONVENTION)
 
 
 def _utcnow() -> datetime:

@@ -26,7 +26,8 @@ os.environ["SECRET_KEY"] = "test-only-signing-key-not-used-outside-the-suite"
 
 from fastapi.testclient import TestClient  # noqa: E402
 
-from app.db.session import engine, init_db  # noqa: E402
+from app.db.migrate import upgrade_to_head  # noqa: E402
+from app.db.session import engine  # noqa: E402
 from app.main import create_app  # noqa: E402
 from app.ratelimit.deps import reset_all  # noqa: E402
 
@@ -92,7 +93,13 @@ def _wrap(text: str, width: int) -> list[str]:
 
 @pytest.fixture(scope="session", autouse=True)
 def _database() -> Iterator[None]:
-    init_db()
+    """Build the test database the way production does: with migrations.
+
+    Using create_all here instead would mean the migration path is never
+    exercised by the suite, and would also collide with the startup check,
+    which migrates and would find tables it did not create.
+    """
+    upgrade_to_head(os.environ["DATABASE_URL"])
     yield
     engine.dispose()
     _TMP_DB.unlink(missing_ok=True)

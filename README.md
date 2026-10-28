@@ -126,6 +126,39 @@ weaker reasoning about *why* something is a weakness.
 > that gap, and a rejected parameter surfaces as `llm_invalid_output` with the
 > API's own explanation.
 
+## Database migrations
+
+The schema is managed by Alembic. `create_all` is no longer used by the
+application: it builds whatever the models currently say, which silently
+diverges from what migrations would have produced.
+
+On startup the app brings the database to head automatically. After changing
+`backend/app/db/models.py`:
+
+```bash
+cd backend
+./.venv/Scripts/python.exe -m alembic revision --autogenerate -m "what changed"
+```
+
+Read the generated file before committing it — autogenerate is a good first
+draft, not a finished migration, and it cannot see data changes at all.
+
+```bash
+./.venv/Scripts/python.exe -m alembic upgrade head    # apply
+./.venv/Scripts/python.exe -m alembic downgrade -1    # undo the last one
+./.venv/Scripts/python.exe -m alembic current         # where am I
+```
+
+**In production set `AUTO_MIGRATE=false`** and run `alembic upgrade head` as a
+deploy step. Automatic migration on startup races when several instances boot
+at once. With it off the app verifies the database is at head and refuses to
+start otherwise, rather than serving requests against an unexpected schema.
+
+`tests/test_migrations.py` asserts the models and the migrations agree, so
+adding a column and forgetting the migration fails the suite instead of
+surfacing on a real deployment. Tests build their database with migrations
+too, so the migration path is exercised on every run.
+
 ## Testing
 
 ```bash

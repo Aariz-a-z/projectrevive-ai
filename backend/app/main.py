@@ -13,7 +13,8 @@ from pydantic import ValidationError
 from app.api.routes import analyses, health
 from app.auth import routes as auth_routes
 from app.config import get_settings
-from app.db.session import init_db
+from app.db.migrate import ensure_schema
+from app.db.session import engine
 from app.errors import LLMInvalidOutput, ProjectReviveError
 
 logger = logging.getLogger(__name__)
@@ -21,7 +22,9 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    init_db()
+    # Migrations, not create_all: the schema this process serves must be one
+    # a migration produced, or the two diverge without anything noticing.
+    ensure_schema(engine, get_settings())
     yield
 
 
