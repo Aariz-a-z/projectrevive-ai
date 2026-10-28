@@ -15,9 +15,20 @@ class ProjectReviveError(Exception):
     status = 500
     message = "Something went wrong while processing the document."
 
-    def __init__(self, message: str | None = None, *, detail: str | None = None):
+    #: Extra response headers, e.g. Retry-After on a 429.
+    headers: dict[str, str] | None = None
+
+    def __init__(
+        self,
+        message: str | None = None,
+        *,
+        detail: str | None = None,
+        headers: dict[str, str] | None = None,
+    ):
         self.message = message or self.message
         self.detail = detail
+        if headers is not None:
+            self.headers = headers
         super().__init__(self.message)
 
     def to_payload(self) -> dict[str, object]:
@@ -135,3 +146,30 @@ class Forbidden(ProjectReviveError):
     code = "forbidden"
     status = 403
     message = "That item does not belong to your account."
+
+
+class RateLimited(ProjectReviveError):
+    """Too many requests. Always carries Retry-After so clients can back off."""
+
+    code = "rate_limited"
+    status = 429
+    message = "Too many requests. Wait a moment and try again."
+
+    def __init__(self, retry_after: int, message: str | None = None):
+        self.retry_after = retry_after
+        super().__init__(message, headers={"Retry-After": str(retry_after)})
+
+    def to_payload(self) -> dict[str, object]:
+        payload = super().to_payload()
+        payload["retry_after_seconds"] = self.retry_after
+        return payload
+
+
+class AccountTemporarilyLocked(RateLimited):
+    """Repeated failed sign-ins for one account.
+
+    Separate from the generic 429 so the UI can explain that this is about the
+    account rather than about request volume.
+    """
+
+    code = "account_locked"

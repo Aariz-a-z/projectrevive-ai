@@ -56,7 +56,11 @@ def create_app() -> FastAPI:
     ) -> JSONResponse:
         if exc.status >= 500:
             logger.error("%s: %s", exc.code, exc.message, exc_info=exc)
-        return JSONResponse(status_code=exc.status, content=exc.to_payload())
+        return JSONResponse(
+            status_code=exc.status,
+            content=exc.to_payload(),
+            headers=exc.headers,
+        )
 
     @app.exception_handler(ValidationError)
     async def handle_model_validation(

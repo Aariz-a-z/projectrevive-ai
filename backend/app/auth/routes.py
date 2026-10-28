@@ -20,7 +20,12 @@ from app.auth.security import (
 from app.config import Settings, get_settings
 from app.db.models import User
 from app.db.session import get_db
-from app.errors import EmailAlreadyRegistered, InvalidCredentials
+from app.errors import (
+    AccountTemporarilyLocked,
+    EmailAlreadyRegistered,
+    InvalidCredentials,
+)
+from app.ratelimit.deps import limit_login, limit_signup, login_failures
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -45,7 +50,12 @@ def _public(user: User) -> UserPublic:
     return UserPublic(id=user.id, email=user.email, created_at=user.created_at)
 
 
-@router.post("/signup", response_model=UserPublic, status_code=201)
+@router.post(
+    "/signup",
+    response_model=UserPublic,
+    status_code=201,
+    dependencies=[Depends(limit_signup)],
+)
 def signup(
     payload: SignupRequest,
     response: Response,
@@ -74,7 +84,9 @@ def signup(
     return _public(user)
 
 
-@router.post("/login", response_model=UserPublic)
+@router.post(
+    "/login", response_model=UserPublic, dependencies=[Depends(limit_login)]
+)
 def login(
     payload: LoginRequest,
     response: Response,
@@ -82,14 +94,34 @@ def login(
     settings: Settings = Depends(get_settings),
 ) -> UserPublic:
     email = payload.email.strip().lower()
+    failures = login_failures(settings)
+
+    # Checked before touching the database, so a locked account costs an
+    # attacker a request and nothing else.
+    locked_for = failures.locked_for(email)
+    if locked_for > 0:
+        raise AccountTemporarilyLocked(
+            locked_for,
+            "Too many failed sign-in attempts for this account. "
+            f"Try again in {locked_for} seconds.",
+        )
+
     user = db.scalar(select(User).where(User.email == email))
 
     if user is None:
+        # Failures are recorded for unknown addresses too. Tracking only real
+        # accounts would make lockout behaviour differ between a registered
+        # and an unregistered email, which is exactly the account enumeration
+        # the identical error responses already avoid.
         verify_password(_DUMMY_HASH, payload.password)
+        failures.record_failure(email)
         raise InvalidCredentials()
 
     if not verify_password(user.password_hash, payload.password):
+        failures.record_failure(email)
         raise InvalidCredentials()
+
+    failures.record_success(email)
 
     # Transparently upgrade the stored hash if Argon2 parameters have changed.
     if needs_rehash(user.password_hash):

@@ -13,6 +13,11 @@ explainable improvements.
 - **Accounts.** Email and password signup, Argon2id hashing, a JWT session in
   an httpOnly cookie. Analyses are private to the account that created them,
   and another account gets a 404 rather than a 403 so ids cannot be probed.
+- **Rate limiting**, in two layers because neither alone is enough. A per-IP
+  sliding window stops one host hammering the endpoint; a per-account lockout
+  with exponential backoff stops a *distributed* attack that rotates addresses
+  and would walk straight through a per-IP limit. Responses carry
+  `Retry-After`.
 - PDF and DOCX upload, validated by file content rather than extension.
 - Text extraction with page numbers preserved.
 - A structured `ProjectProfile`: title, domain, problem statement, algorithms,
@@ -56,8 +61,16 @@ cp .env.example .env.local
 Two processes:
 
 ```bash
-cd backend && ./.venv/Scripts/python.exe -m uvicorn app.main:app --reload --port 8000
+cd backend && ./.venv/Scripts/python.exe run.py
 ```
+
+> Use `run.py` rather than calling `uvicorn` directly. Uvicorn enables proxy
+> headers by default, which makes it rewrite the client address from
+> `X-Forwarded-For` *before* any application code runs — so with no proxy in
+> front, a client can spoof that header and hand itself a fresh identity on
+> every request, defeating per-IP rate limiting. `run.py` ties uvicorn's
+> setting to `TRUST_PROXY_HEADERS`. If you do run uvicorn directly, pass
+> `--no-proxy-headers`.
 
 ```bash
 cd frontend && npm run dev
@@ -91,6 +104,12 @@ All settings come from the environment. See `backend/.env.example`.
 | `SECRET_KEY` | _generated_ | Signs session tokens. Unset in development, a random key is generated and persisted to `backend/.secret_key` (gitignored). **Must be set explicitly in production** — there is deliberately no hardcoded fallback. |
 | `COOKIE_SECURE` | `false` | Set `true` behind HTTPS so the session cookie is never sent in clear. |
 | `MIN_PASSWORD_LENGTH` | `10` | Length floor. Composition rules are deliberately not enforced (see `backend/app/auth/policy.py`). |
+| `LOGIN_ATTEMPTS_PER_IP` | `20` per 5 min | Per-address cap on sign-in attempts. |
+| `SIGNUP_ATTEMPTS_PER_IP` | `5` per hour | Per-address cap on account creation. |
+| `UPLOAD_PER_USER` | `20` per hour | Per-account cap on analyses — this is the one that costs money once a model is configured. |
+| `LOCKOUT_THRESHOLD` | `5` | Consecutive failed sign-ins before an account locks. |
+| `LOCKOUT_MAX_SECONDS` | `600` | Backoff ceiling. Capped at minutes, not hours: a per-account lock can be triggered deliberately by anyone who knows the address, and there is no password reset yet. |
+| `TRUST_PROXY_HEADERS` | `false` | Only enable behind a proxy that **overwrites** `X-Forwarded-For`. Requires starting via `run.py` to take effect. |
 | `LLM_PROVIDER` | `mock` | `mock` costs nothing and needs no key. `anthropic` performs a real analysis. |
 | `ANTHROPIC_API_KEY` | _unset_ | Required only when `LLM_PROVIDER=anthropic`. |
 | `ANALYSIS_MODEL` | `claude-opus-5-5` | Roughly $0.25–0.40 per 20-page report. `claude-haiku-5-5` is about 25x cheaper. |
@@ -134,7 +153,9 @@ must display.
 - [x] **Phase 0** — walking skeleton: upload, extract, profile, render
 - [x] **Accounts and dashboard** — signup/login, per-user analyses, dark tabbed
       UI. Pulled forward from the original "future features" list on request.
-- [ ] **Phase 1** — hardening: rate limits on auth, Alembic migrations, CI
+- [x] **Rate limiting** — per-IP windows, per-account lockout, proxy-header
+      hardening
+- [ ] **Phase 1** — remaining hardening: Alembic migrations, CI
 - [ ] **Phase 2** — real Anthropic provider, gap analysis
 - [ ] **Phase 3** — hybrid recommendation engine and knowledge base
 - [ ] **Phase 4** — stack comparison, Mermaid architecture, roadmap, export

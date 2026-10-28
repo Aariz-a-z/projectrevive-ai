@@ -28,6 +28,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 
 from app.db.session import engine, init_db  # noqa: E402
 from app.main import create_app  # noqa: E402
+from app.ratelimit.deps import reset_all  # noqa: E402
 
 SAMPLE_PAGES = [
     "Handwritten Digit Recognition Using Deep Learning",
@@ -95,6 +96,18 @@ def _database() -> Iterator[None]:
     yield
     engine.dispose()
     _TMP_DB.unlink(missing_ok=True)
+
+
+@pytest.fixture(autouse=True)
+def _reset_rate_limits() -> Iterator[None]:
+    """Rate limiters are process-wide singletons.
+
+    Without this every test would share one window, so the sixth test to call
+    signup would start failing for reasons that have nothing to do with it.
+    """
+    reset_all()
+    yield
+    reset_all()
 
 
 @pytest.fixture

@@ -33,6 +33,33 @@ class Settings(BaseSettings):
     cookie_secure: bool = False  # True behind HTTPS in production
     min_password_length: int = 10
 
+    # --- Rate limiting ---
+    # Limits are per process. With multiple workers each keeps its own
+    # counters, so the effective limit multiplies by the worker count.
+    rate_limit_enabled: bool = True
+    login_attempts_per_ip: int = 20
+    login_window_seconds: int = 300
+    signup_attempts_per_ip: int = 5
+    signup_window_seconds: int = 3600
+    upload_per_user: int = 20
+    upload_window_seconds: int = 3600
+    # Consecutive failed sign-ins for one account before backoff begins.
+    lockout_threshold: int = 5
+    lockout_base_seconds: int = 30
+    lockout_max_seconds: int = 600
+
+    # Only enable behind a proxy that overwrites X-Forwarded-For. With no
+    # such proxy, trusting the header lets any client forge its own address
+    # and bypass every per-IP limit.
+    #
+    # This setting is only effective if the server also respects it. Uvicorn
+    # enables proxy headers by default and rewrites the client address before
+    # application code runs, so start the API with backend/run.py, which wires
+    # uvicorn's option to this value.
+    trust_proxy_headers: bool = False
+    # Which peers may set forwarded headers, when they are trusted at all.
+    forwarded_allow_ips: str = "127.0.0.1"
+
     # --- Upload limits (README section 10) ---
     max_upload_mb: int = 20
     max_pages: int = 300

@@ -16,6 +16,7 @@ from app.db.session import get_db
 from app.documents.extract import extract
 from app.errors import AnalysisNotFound, EmptyDocument, FileTooLarge
 from app.llm.registry import get_provider
+from app.ratelimit.deps import limit_upload_for
 from app.schemas.api import (
     AnalysisDetail,
     AnalysisProvenance,
@@ -90,6 +91,10 @@ async def create_analysis(
     Processing is synchronous in this phase. The document bytes are never
     written to disk and are discarded once the profile is built.
     """
+    # Checked before reading the body: an over-quota client should not get to
+    # stream 20 MB first.
+    limit_upload_for(user.id, settings)
+
     data = await _read_limited(file, settings.max_upload_bytes)
     if not data:
         raise EmptyDocument("No file content was received.")
