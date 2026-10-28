@@ -5,6 +5,32 @@ Postgres managed elsewhere.
 
 Every step below needs an account you own. Nothing here can be done for you.
 
+## What has and has not been verified
+
+| | Status |
+|---|---|
+| API proxy carries the session cookie | **Verified** — signed up through the proxy, confirmed `Set-Cookie` returns from the proxy origin with `HttpOnly; SameSite=lax`, and an authenticated request through it succeeds |
+| Frontend production build | **Verified** — `npm run build` passes |
+| Migrations against SQLite | **Verified** — fresh database built by migration on startup, 221 tests pass |
+| Docker image builds | **Not verified** — the Docker daemon was unavailable. The Dockerfile has never been built |
+| Postgres | **Not verified** — the driver is declared but has never connected to a real database |
+
+The second two matter. SQLite and Postgres differ in ways that surface exactly
+here: stricter type handling, real transactional DDL, and `JSON` behaving
+differently from SQLite's loose storage. **Build the image and run the
+migrations against Postgres locally before trusting a deployment:**
+
+```bash
+cd backend
+docker build -t projectrevive-api:local .
+docker run -d --name pg -e POSTGRES_PASSWORD=dev -p 5432:5432 postgres:17
+DATABASE_URL='postgresql://postgres:dev@localhost:5432/postgres' \
+  ./.venv/Scripts/python.exe -m alembic upgrade head
+```
+
+If that upgrade succeeds, the schema is Postgres-compatible. If the image
+builds and `/api/health` answers, the container is sound.
+
 ## The one thing that is easy to get wrong
 
 **The browser must only ever talk to the Vercel origin.** The frontend proxies
