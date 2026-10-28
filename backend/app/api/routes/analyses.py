@@ -24,9 +24,13 @@ from app.schemas.api import (
     AnalysisSummary,
     UsageInfo,
 )
+from app.architecture.graph import build_view
+from app.compare.stack import compare_stack
 from app.recommend.engine import recommend
 from app.schemas.findings import FindingsReport
 from app.schemas.project import ProjectProfile
+from app.schemas.architecture import ArchitectureView
+from app.schemas.comparison import StackComparison
 from app.schemas.recommendation import RecommendationReport
 
 router = APIRouter(prefix="/analyses", tags=["analyses"])
@@ -70,6 +74,12 @@ def _to_detail(row: Analysis) -> AnalysisDetail:
     profile = ProjectProfile.model_validate(row.profile)
     findings = FindingsReport.model_validate(row.findings or {})
     recommendations = RecommendationReport.model_validate(row.recommendations or {})
+    comparison = StackComparison.model_validate(row.comparison or {})
+    architecture = (
+        ArchitectureView.model_validate(row.architecture)
+        if row.architecture
+        else None
+    )
     return AnalysisDetail(
         id=row.id,
         created_at=row.created_at,
@@ -82,6 +92,8 @@ def _to_detail(row: Analysis) -> AnalysisDetail:
         profile=profile,
         findings=findings,
         recommendations=recommendations,
+        comparison=comparison,
+        architecture=architecture,
         claim_counts=profile.counts_by_source(),
         finding_counts=findings.by_severity(),
         finding_sources=findings.counts_by_source(),
@@ -120,6 +132,8 @@ async def create_analysis(
         document,
         embedder_name=settings.embedder,
     )
+    comparison = compare_stack(result.parsed, advice.recommendations)
+    architecture = build_view(result.parsed, advice.recommendations)
 
     row = Analysis(
         id=uuid.uuid4().hex,
@@ -139,6 +153,8 @@ async def create_analysis(
         profile=result.parsed.model_dump(mode="json"),
         findings=gaps.parsed.model_dump(mode="json"),
         recommendations=advice.model_dump(mode="json"),
+        comparison=comparison.model_dump(mode="json"),
+        architecture=architecture.model_dump(mode="json"),
         warnings=[*result.warnings, *gaps.warnings],
     )
     db.add(row)

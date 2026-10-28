@@ -86,4 +86,8 @@ class Analysis(Base):
     findings: Mapped[dict] = mapped_column(JSON, default=dict)
     # Ranked recommendations, as a RecommendationReport dump.
     recommendations: Mapped[dict] = mapped_column(JSON, default=dict)
+    # Current-versus-proposed stack, as a StackComparison dump.
+    comparison: Mapped[dict] = mapped_column(JSON, default=dict)
+    # Component graphs and rendered diagrams, as an ArchitectureView dump.
+    architecture: Mapped[dict] = mapped_column(JSON, default=dict)
     warnings: Mapped[list] = mapped_column(JSON, default=list)

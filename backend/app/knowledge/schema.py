@@ -13,8 +13,22 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field, field_validator
 
+from app.schemas.architecture import NodeKind
 from app.schemas.findings import FindingCategory
 from app.schemas.recommendation import Complexity, CostBand, SkillLevel
+
+
+class ComponentSpec(BaseModel):
+    """A runtime component this entry would add to the architecture.
+
+    Declared here rather than mapped elsewhere, so adding a knowledge base
+    entry updates the proposed diagram instead of needing a second table kept
+    in sync by hand.
+    """
+
+    kind: NodeKind
+    label: str = Field(min_length=3, max_length=60)
+    detail: str | None = Field(default=None, max_length=120)
 
 
 class KBEntry(BaseModel):
@@ -56,6 +70,11 @@ class KBEntry(BaseModel):
         ge=0.0,
         le=1.0,
         description="Hand-assigned expected benefit. An estimate, not a measurement.",
+    )
+    adds_component: ComponentSpec | None = None
+    replaces: str | None = Field(
+        default=None,
+        description="A technology this entry replaces, if any. Never set from age.",
     )
     requires_gpu: bool = False
     min_dataset_rows: int | None = None

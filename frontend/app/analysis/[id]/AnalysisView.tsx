@@ -14,7 +14,9 @@ import {
   IconSearch,
   IconShield,
 } from "@/components/icons";
+import { MermaidDiagram } from "@/components/MermaidDiagram";
 import { RecommendationCard } from "@/components/RecommendationCard";
+import { StackList } from "@/components/StackList";
 import {
   Badge,
   Notice,
@@ -31,6 +33,7 @@ import { AnalysisSkeleton } from "./Skeleton";
 const TABS = [
   { id: "overview", label: "Overview", icon: <IconSearch /> },
   { id: "stack", label: "Tech Stack", icon: <IconCode /> },
+  { id: "architecture", label: "Architecture", icon: <IconLayers /> },
   { id: "evaluation", label: "Evaluation", icon: <IconShield /> },
   { id: "findings", label: "Findings", icon: <IconAlert /> },
   { id: "recommendations", label: "Recommendations", icon: <IconLayers /> },
@@ -307,31 +310,151 @@ export function AnalysisView() {
       )}
 
       {tab === "stack" && (
-        <Panel>
-          <PanelHeader title="Technology stack" icon={<IconCode />} accent="blue" />
-          <div className="space-y-5 p-4">
-            <Section
-              title="Algorithms and models"
-              description="Each chip shows the page it was found on."
-            >
-              <ClaimChips claims={profile.algorithms} />
-            </Section>
-            <div className="grid gap-5 sm:grid-cols-2">
-              <Section title="Languages">
-                <ClaimChips claims={profile.stack.languages} />
+        <div className="grid gap-5 lg:grid-cols-[1.5fr_0.5fr]">
+          <Panel>
+            <PanelHeader
+              title="Current versus proposed"
+              icon={<IconCode />}
+              accent="blue"
+            />
+            <div className="space-y-5 p-4">
+              <Section
+                title="Keep"
+                description="Used by the project, with no reason found to change it. A verdict, not an omission."
+              >
+                <StackList
+                  entries={analysis.comparison.entries.filter(
+                    (e) => e.verdict === "keep",
+                  )}
+                  empty="Nothing in the report could be attributed to a specific technology."
+                />
               </Section>
-              <Section title="Frameworks">
-                <ClaimChips claims={profile.stack.frameworks} />
+
+              <Section
+                title="Add"
+                description="Introduced by a recommendation. Each one names which."
+              >
+                <StackList
+                  entries={analysis.comparison.entries.filter(
+                    (e) => e.verdict === "add",
+                  )}
+                  empty="The recommendations need nothing the project does not already use."
+                />
               </Section>
-              <Section title="Libraries">
-                <ClaimChips claims={profile.stack.libraries} />
-              </Section>
-              <Section title="Tools">
-                <ClaimChips claims={profile.stack.tools} />
-              </Section>
+
+              {analysis.comparison.entries.some(
+                (e) => e.verdict === "replace",
+              ) && (
+                <Section title="Replace">
+                  <StackList
+                    entries={analysis.comparison.entries.filter(
+                      (e) => e.verdict === "replace",
+                    )}
+                    empty=""
+                  />
+                </Section>
+              )}
             </div>
+          </Panel>
+
+          <div className="space-y-5">
+            <Panel>
+              <PanelHeader
+                title="Algorithms in the report"
+                icon={<IconSearch />}
+              />
+              <div className="p-4">
+                <ClaimChips claims={profile.algorithms} />
+              </div>
+            </Panel>
+
+            <Panel>
+              <PanelHeader
+                title="How this was decided"
+                icon={<IconShield />}
+                accent="violet"
+              />
+              <ul className="space-y-2 p-4 text-[11px] leading-relaxed text-muted">
+                {analysis.comparison.notes.map((note, index) => (
+                  <li key={index} className="border-l-2 border-violet pl-3">
+                    {note}
+                  </li>
+                ))}
+              </ul>
+            </Panel>
           </div>
-        </Panel>
+        </div>
+      )}
+
+      {tab === "architecture" && (
+        <div className="space-y-5">
+          {!analysis.architecture ? (
+            <Notice tone="info" title="No architecture was generated">
+              This analysis predates the architecture view. Re-run it to
+              generate one.
+            </Notice>
+          ) : (
+            <>
+              <div className="grid gap-5 lg:grid-cols-2">
+                <Panel>
+                  <PanelHeader
+                    title="As described in the report"
+                    icon={<IconLayers />}
+                  />
+                  <div className="p-4">
+                    <MermaidDiagram
+                      chart={analysis.architecture.current_mermaid}
+                      ariaLabel="Architecture described in the report"
+                    />
+                  </div>
+                </Panel>
+
+                <Panel>
+                  <PanelHeader
+                    title="With the recommendations applied"
+                    icon={<IconLayers />}
+                    accent="green"
+                    right={
+                      analysis.architecture.proposed.nodes.some(
+                        (n) => n.origin === "proposed",
+                      ) ? (
+                        <Badge accent="green">
+                          +
+                          {
+                            analysis.architecture.proposed.nodes.filter(
+                              (n) => n.origin === "proposed",
+                            ).length
+                          }
+                        </Badge>
+                      ) : undefined
+                    }
+                  />
+                  <div className="p-4">
+                    <MermaidDiagram
+                      chart={analysis.architecture.proposed_mermaid}
+                      ariaLabel="Architecture with the recommendations applied"
+                    />
+                  </div>
+                </Panel>
+              </div>
+
+              <Panel>
+                <PanelHeader
+                  title="Reading these diagrams"
+                  icon={<IconShield />}
+                  accent="violet"
+                />
+                <ul className="space-y-2 p-4 text-[11px] leading-relaxed text-muted">
+                  {analysis.architecture.notes.map((note, index) => (
+                    <li key={index} className="border-l-2 border-violet pl-3">
+                      {note}
+                    </li>
+                  ))}
+                </ul>
+              </Panel>
+            </>
+          )}
+        </div>
       )}
 
       {tab === "evaluation" && (

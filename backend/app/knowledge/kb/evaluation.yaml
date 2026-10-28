@@ -297,3 +297,7 @@
   cost: none
   skill_level: beginner
   impact: 0.85
+  adds_component:
+    kind: evaluation
+    label: Evaluation
+    detail: A primary metric tied to the decision the model supports

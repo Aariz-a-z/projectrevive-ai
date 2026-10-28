@@ -40,6 +40,10 @@
   cost: none
   skill_level: intermediate
   impact: 0.9
+  adds_component:
+    kind: preprocess
+    label: Preprocessing pipeline
+    detail: Fitted on training folds only
 
 - id: class-weighting-before-resampling
   title: Try class weights before reaching for synthetic oversampling

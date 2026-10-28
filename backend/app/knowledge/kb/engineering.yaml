@@ -114,6 +114,10 @@
   cost: low
   skill_level: intermediate
   impact: 0.7
+  adds_component:
+    kind: serving
+    label: Inference API
+    detail: Typed request schema, serialised pipeline
 
 - id: containerise-the-service
   title: Containerise the service so the environment travels with it
@@ -227,6 +231,10 @@
   cost: low
   skill_level: intermediate
   impact: 0.5
+  adds_component:
+    kind: storage
+    label: Experiment tracking
+    detail: Parameters, metrics and artefacts per run
 
 - id: monitor-inputs-after-deployment
   title: Monitor input distributions once the model is serving
@@ -264,6 +272,10 @@
   cost: medium
   skill_level: advanced
   impact: 0.45
+  adds_component:
+    kind: monitoring
+    label: Drift monitoring
+    detail: Input distributions compared against a training baseline
 
 - id: validate-and-bound-api-input
   title: Validate and bound inputs at the service boundary

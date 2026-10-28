@@ -40,9 +40,18 @@ explainable improvements.
   - A **transparent score**: a weighted sum whose components and weights are
     shown with every recommendation. Hardware a project does not have excludes
     an entry outright rather than ranking it lower, with the reason stated.
-- A tabbed dashboard — Overview, Tech Stack, Evaluation, Findings,
-  Recommendations, Evidence — including an evidence view that groups every
-  quote by the page it came from.
+- A **stack comparison** where "keep" is a verdict with its own reasoning, not
+  the absence of one. Nothing is marked for replacement because it is old:
+  there is no code path that can produce a replacement from age alone.
+- **Architecture diagrams** generated from a validated component graph rather
+  than from model prose, rendered as before-and-after. The current diagram
+  contains only components the report evidences, so a missing stage means the
+  report did not describe it. The backend refuses to emit a diagram it cannot
+  parse back, and the UI falls back to showing the source if Mermaid still
+  rejects it.
+- A tabbed dashboard — Overview, Tech Stack, Architecture, Evaluation,
+  Findings, Recommendations, Evidence — including an evidence view that groups
+  every quote by the page it came from.
 - **Every finding is labelled** as either stated in the report, with a page
   citation and verbatim quote you can open and check, or inferred, with the
   reasoning shown.
@@ -294,7 +303,9 @@ must display.
       handling, prompt caching, server-side fallbacks
 - [x] **Phase 2** — weakness and gap analysis, rules plus model
 - [x] **Phase 3** — hybrid recommendation engine and knowledge base
-- [ ] **Phase 4** — stack comparison, Mermaid architecture, roadmap, export
+- [x] **Phase 4, part one** — stack comparison and Mermaid architecture
+- [ ] **Phase 4, part two** — development roadmap and the exportable report,
+      the last two MVP acceptance criteria outstanding
 - [x] **Evaluation harness** — precision@K, NDCG@K, coverage, hybrid against
       two ablations, with the result reported as measured
 - [ ] **Phase 5** — accessibility pass, more evaluation cases from a second

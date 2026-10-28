@@ -83,6 +83,9 @@ export interface AnalysisDetail extends AnalysisSummary {
   profile: ProjectProfile;
   findings: FindingsReport;
   recommendations: RecommendationReport;
+  comparison: StackComparison;
+  /** Null for analyses created before this output existed. */
+  architecture: ArchitectureView | null;
   claim_counts: { total: number; stated: number; inferred: number };
   finding_counts: { high: number; medium: number; low: number };
   finding_sources: { total: number; rule: number; model: number };
@@ -163,6 +166,57 @@ export interface RecommendationReport {
   constraints: UserConstraints;
   notes: string[];
   excluded: string[];
+}
+
+export type StackVerdict = "keep" | "add" | "replace";
+
+export interface StackEntry {
+  name: string;
+  category: string;
+  verdict: StackVerdict;
+  rationale: string;
+  evidence: Evidence[];
+  introduced_by: string[];
+  replaces: string | null;
+  migration_complexity: Complexity | null;
+  cost: CostBand | null;
+}
+
+export interface StackComparison {
+  entries: StackEntry[];
+  notes: string[];
+}
+
+export type NodeKind =
+  | "data"
+  | "preprocess"
+  | "features"
+  | "model"
+  | "evaluation"
+  | "serving"
+  | "monitoring"
+  | "storage";
+
+export interface GraphNode {
+  id: string;
+  label: string;
+  kind: NodeKind;
+  origin: "report" | "proposed";
+  detail: string | null;
+}
+
+export interface ComponentGraph {
+  title: string;
+  nodes: GraphNode[];
+  edges: { source: string; target: string; label: string }[];
+}
+
+export interface ArchitectureView {
+  current: ComponentGraph;
+  proposed: ComponentGraph;
+  current_mermaid: string;
+  proposed_mermaid: string;
+  notes: string[];
 }
 
 export interface UserPublic {

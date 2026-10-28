@@ -12,6 +12,8 @@ from pydantic import BaseModel, Field
 
 from app.schemas.findings import FindingsReport
 from app.schemas.project import ProjectProfile
+from app.schemas.architecture import ArchitectureView
+from app.schemas.comparison import StackComparison
 from app.schemas.recommendation import RecommendationReport
 
 
@@ -50,6 +52,8 @@ class AnalysisDetail(AnalysisSummary):
     profile: ProjectProfile
     findings: FindingsReport
     recommendations: RecommendationReport
+    comparison: StackComparison
+    architecture: ArchitectureView | None = None
     claim_counts: dict[str, int]
     finding_counts: dict[str, int] = Field(
         default_factory=dict,
