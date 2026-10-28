@@ -34,6 +34,10 @@ explainable improvements.
   enters the system prompt; injection-looking content is flagged, not obeyed.
 - A deterministic mock provider, so the whole pipeline runs with no API key and
   no spend. Its output is labelled as mock everywhere it appears.
+- A real **Anthropic provider** using structured outputs, so the model's
+  response is schema-validated before anything downstream sees it. Handles
+  policy declines (which arrive as HTTP 200, not an exception), truncated
+  output, and every SDK error class as a distinct, actionable message.
 
 ## Requirements
 
@@ -78,6 +82,30 @@ cd frontend && npm run dev
 
 Then open http://localhost:3000. A sample report to try is in
 [`samples/sample_report.pdf`](samples/sample_report.pdf).
+
+## Using a real model
+
+The app runs on the mock provider by default — no key, no spend. To use a real
+model, put a key in `backend/.env` and verify it before wiring it in:
+
+```bash
+cd backend && ./.venv/Scripts/python.exe check_provider.py
+```
+
+That makes one small real call (a fraction of a cent), prints the measured
+token usage and an estimated cost, and confirms structured output validates.
+Then set `LLM_PROVIDER=anthropic` to use it for analyses.
+
+Roughly **$0.25–0.40 per 20-page report** on `claude-opus-5-5`. Setting
+`ANALYSIS_MODEL=claude-haiku-5-5` drops that to about $0.015, at the cost of
+weaker reasoning about *why* something is a weakness.
+
+> The provider's unit tests use a stubbed SDK client, so they verify the
+> request shape and every failure path without spending anything. What they
+> cannot verify is that the live API accepts those parameters — an invalid key
+> is rejected before parameter validation. `check_provider.py` is what closes
+> that gap, and a rejected parameter surfaces as `llm_invalid_output` with the
+> API's own explanation.
 
 ## Testing
 
@@ -156,7 +184,9 @@ must display.
 - [x] **Rate limiting** — per-IP windows, per-account lockout, proxy-header
       hardening
 - [ ] **Phase 1** — remaining hardening: Alembic migrations, CI
-- [ ] **Phase 2** — real Anthropic provider, gap analysis
+- [x] **Real Anthropic provider** — structured outputs, refusal and truncation
+      handling, prompt caching, server-side fallbacks
+- [ ] **Phase 2** — weakness and gap analysis on top of the profile
 - [ ] **Phase 3** — hybrid recommendation engine and knowledge base
 - [ ] **Phase 4** — stack comparison, Mermaid architecture, roadmap, export
 - [ ] **Phase 5** — evaluation harness vs. baselines, accessibility

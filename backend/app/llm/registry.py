@@ -24,6 +24,8 @@ def get_provider(settings: Settings) -> LLMProvider:
             api_key=settings.anthropic_api_key,
             model=settings.analysis_model,
             effort=settings.analysis_effort,
+            max_tokens=settings.analysis_max_tokens,
+            timeout_seconds=settings.analysis_timeout_seconds,
         )
 
     raise LLMUnavailable(f"Unknown LLM provider {settings.llm_provider!r}.")

@@ -95,6 +95,32 @@ class LLMUnavailable(ProjectReviveError):
     message = "The analysis model is not reachable right now. Try again shortly."
 
 
+class LLMRefused(ProjectReviveError):
+    """The model's safety classifiers declined the request.
+
+    Surfaced distinctly from a crash so the user learns their document tripped
+    a policy check rather than that the service is broken.
+    """
+
+    code = "llm_refused"
+    status = 422
+    message = (
+        "The analysis model declined to process this document. That usually "
+        "means something in its content triggered a safety classifier."
+    )
+
+
+class LLMOutputTruncated(ProjectReviveError):
+    """The model hit the output cap mid-structure."""
+
+    code = "llm_output_truncated"
+    status = 502
+    message = (
+        "The analysis did not fit within the model's output limit, so it was "
+        "rejected rather than shown half-finished. Try a shorter document."
+    )
+
+
 class LLMInvalidOutput(ProjectReviveError):
     code = "llm_invalid_output"
     status = 502

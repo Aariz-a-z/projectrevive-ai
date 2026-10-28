@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     anthropic_api_key: str | None = None
     analysis_model: str = "claude-opus-5-5"
     analysis_effort: Literal["low", "medium", "high", "xhigh", "max"] = "high"
+    # 16k keeps a non-streaming request comfortably inside HTTP timeouts while
+    # leaving room for a large structured profile.
+    analysis_max_tokens: int = 16000
+    analysis_timeout_seconds: float = 300.0
 
     # --- Recommendation engine ---
     embedder: Literal["tfidf", "sentence_transformer"] = "tfidf"
