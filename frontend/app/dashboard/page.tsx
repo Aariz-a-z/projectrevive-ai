@@ -135,11 +135,12 @@ export default function DashboardPage() {
       </div>
 
       {health?.llm.is_mock && (
-        <Notice tone="caution" title="Running on the deterministic mock provider">
-          No language model is configured, so analysis comes from keyword
-          matching rather than comprehension. It is real output from your
-          document, but it is not a real analysis. Set{" "}
-          <code>LLM_PROVIDER=anthropic</code> and an API key on the backend.
+        <Notice tone="caution" title="No language model is configured">
+          Project profiles come from keyword matching rather than
+          comprehension. Weakness and gap detection still works fully, since
+          those rules need no model. Set{" "}
+          <code>LLM_PROVIDER=anthropic</code> and an API key on the backend for
+          the model&rsquo;s contribution.
         </Notice>
       )}
 

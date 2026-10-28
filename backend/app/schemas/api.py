@@ -10,6 +10,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+from app.schemas.findings import FindingsReport
 from app.schemas.project import ProjectProfile
 
 
@@ -46,7 +47,16 @@ class AnalysisSummary(BaseModel):
 class AnalysisDetail(AnalysisSummary):
     content_type: str
     profile: ProjectProfile
+    findings: FindingsReport
     claim_counts: dict[str, int]
+    finding_counts: dict[str, int] = Field(
+        default_factory=dict,
+        description="Findings by severity, for the dashboard summary.",
+    )
+    finding_sources: dict[str, int] = Field(
+        default_factory=dict,
+        description="How many findings came from rules versus the model.",
+    )
     warnings: list[str] = Field(
         default_factory=list,
         description="Caveats about this analysis: unverifiable citations, "

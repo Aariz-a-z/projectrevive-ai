@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { ClaimChips, ClaimList, ClaimView } from "@/components/ClaimView";
+import { FindingCard } from "@/components/FindingCard";
 import {
   IconAlert,
   IconCode,
@@ -189,10 +190,13 @@ export function AnalysisView() {
       </header>
 
       {analysis.provenance.is_mock && (
-        <Notice tone="caution" title="This is mock-provider output">
-          No language model produced this. The findings come from keyword
-          matching over your document, so treat them as a structural
-          demonstration rather than an analysis of your project&rsquo;s merits.
+        <Notice tone="caution" title="No language model is configured">
+          The <strong>project profile</strong> below came from keyword matching
+          rather than comprehension, so treat it as a structural demonstration.
+          The <strong>weaknesses and gaps</strong> are different: those come
+          from deterministic rules that need no model, and are as valid here as
+          they would be with one. A model would add judgements the rules cannot
+          make.
         </Notice>
       )}
 
@@ -353,41 +357,98 @@ export function AnalysisView() {
       )}
 
       {tab === "findings" && (
-        <div className="grid gap-5 lg:grid-cols-2">
+        <div className="grid gap-5 lg:grid-cols-[1.5fr_0.5fr]">
           <Panel>
             <PanelHeader
-              title="Limitations stated in the report"
+              title="Weaknesses and gaps"
               icon={<IconAlert />}
-              accent="amber"
+              accent="rose"
+              right={
+                <Badge accent="rose">{analysis.findings.findings.length}</Badge>
+              }
             />
-            <div className="p-4">
-              <ClaimList
-                claims={profile.stated_limitations}
-                emptyMessage="The report does not state any limitations explicitly."
-              />
+            <div className="space-y-3 p-4">
+              {analysis.findings.findings.length === 0 ? (
+                <p className="py-8 text-center text-sm text-muted">
+                  No weaknesses or gaps were detected in this report.
+                </p>
+              ) : (
+                analysis.findings.findings.map((finding, index) => (
+                  <FindingCard key={`${finding.title}-${index}`} finding={finding} />
+                ))
+              )}
             </div>
           </Panel>
 
           <div className="space-y-5">
             <Panel>
-              <PanelHeader title="Methodology" icon={<IconSearch />} />
+              <PanelHeader title="Severity" icon={<IconAlert />} accent="amber" />
+              <div className="space-y-2 p-4">
+                {(
+                  [
+                    ["high", "rose", "May invalidate the results"],
+                    ["medium", "amber", "Limits usefulness"],
+                    ["low", "cyan", "Worth improving"],
+                  ] as const
+                ).map(([key, accent, caption]) => (
+                  <div
+                    key={key}
+                    className="flex items-center justify-between gap-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium capitalize">{key}</p>
+                      <p className="truncate text-[11px] text-muted">{caption}</p>
+                    </div>
+                    <Badge accent={accent}>
+                      {analysis.finding_counts?.[key] ?? 0}
+                    </Badge>
+                  </div>
+                ))}
+
+                <div className="mt-3 border-t border-edge pt-3 text-[11px] text-muted">
+                  <p className="flex justify-between">
+                    <span>From deterministic rules</span>
+                    <span className="font-mono text-green">
+                      {analysis.finding_sources?.rule ?? 0}
+                    </span>
+                  </p>
+                  <p className="mt-1 flex justify-between">
+                    <span>From the model</span>
+                    <span className="font-mono text-amber">
+                      {analysis.finding_sources?.model ?? 0}
+                    </span>
+                  </p>
+                  <p className="mt-2 leading-relaxed">
+                    Rule findings can be read and checked in the source. Model
+                    findings are judgements worth verifying yourself.
+                  </p>
+                </div>
+              </div>
+            </Panel>
+
+            <Panel>
+              <PanelHeader
+                title="Stated by the authors"
+                icon={<IconQuote />}
+                accent="violet"
+              />
               <div className="p-4">
                 <ClaimList
-                  claims={profile.methodology}
-                  emptyMessage="No methodology description was identified."
+                  claims={profile.stated_limitations}
+                  emptyMessage="The report does not state any limitations explicitly."
                 />
               </div>
             </Panel>
 
-            {profile.extraction_notes.length > 0 && (
+            {analysis.findings.notes.length > 0 && (
               <Panel>
                 <PanelHeader
-                  title="Extraction notes"
-                  icon={<IconQuote />}
+                  title="Analysis notes"
+                  icon={<IconSearch />}
                   accent="violet"
                 />
-                <ul className="space-y-2 p-4 text-xs leading-relaxed text-muted">
-                  {profile.extraction_notes.map((note, index) => (
+                <ul className="space-y-2 p-4 text-[11px] leading-relaxed text-muted">
+                  {analysis.findings.notes.map((note, index) => (
                     <li key={index} className="border-l-2 border-violet pl-3">
                       {note}
                     </li>

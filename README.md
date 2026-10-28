@@ -22,6 +22,14 @@ explainable improvements.
 - Text extraction with page numbers preserved.
 - A structured `ProjectProfile`: title, domain, problem statement, algorithms,
   tech stack, evaluation metrics, stated limitations.
+- **Weakness and gap analysis**, from two sources that are labelled separately
+  because they are not equally trustworthy:
+  - 14 **deterministic rules** over the structured profile and document text.
+    They cannot hallucinate, they are readable in `backend/app/analysis/rules.py`,
+    and they run with no API key — so this feature works on the mock provider.
+  - The **model**, for judgements the rules cannot make. Its findings go
+    through the same citation verification as the profile, and a weakness whose
+    quote cannot be found is dropped rather than softened.
 - A tabbed dashboard — Overview, Tech Stack, Evaluation, Findings, Evidence —
   including an evidence view that groups every quote by the page it came from.
 - **Every finding is labelled** as either stated in the report, with a page
@@ -186,7 +194,7 @@ must display.
 - [ ] **Phase 1** — remaining hardening: Alembic migrations, CI
 - [x] **Real Anthropic provider** — structured outputs, refusal and truncation
       handling, prompt caching, server-side fallbacks
-- [ ] **Phase 2** — weakness and gap analysis on top of the profile
+- [x] **Phase 2** — weakness and gap analysis, rules plus model
 - [ ] **Phase 3** — hybrid recommendation engine and knowledge base
 - [ ] **Phase 4** — stack comparison, Mermaid architecture, roadmap, export
 - [ ] **Phase 5** — evaluation harness vs. baselines, accessibility

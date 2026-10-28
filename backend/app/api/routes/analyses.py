@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, UploadFile
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.analysis.gaps import analyse_gaps
 from app.analysis.profile import build_profile
 from app.auth.deps import get_current_user
 from app.config import Settings, get_settings
@@ -23,6 +24,7 @@ from app.schemas.api import (
     AnalysisSummary,
     UsageInfo,
 )
+from app.schemas.findings import FindingsReport
 from app.schemas.project import ProjectProfile
 
 router = APIRouter(prefix="/analyses", tags=["analyses"])
@@ -64,6 +66,7 @@ def _provenance(row: Analysis) -> AnalysisProvenance:
 
 def _to_detail(row: Analysis) -> AnalysisDetail:
     profile = ProjectProfile.model_validate(row.profile)
+    findings = FindingsReport.model_validate(row.findings or {})
     return AnalysisDetail(
         id=row.id,
         created_at=row.created_at,
@@ -74,7 +77,10 @@ def _to_detail(row: Analysis) -> AnalysisDetail:
         title=profile.title.value,
         provenance=_provenance(row),
         profile=profile,
+        findings=findings,
         claim_counts=profile.counts_by_source(),
+        finding_counts=findings.by_severity(),
+        finding_sources=findings.counts_by_source(),
         warnings=list(row.warnings or []),
     )
 
@@ -101,7 +107,9 @@ async def create_analysis(
 
     document = extract(data, file.filename or "upload", settings)
     provider = get_provider(settings)
+
     result = build_profile(document, provider)
+    gaps = analyse_gaps(result.parsed, document, provider)
 
     row = Analysis(
         id=uuid.uuid4().hex,
@@ -112,11 +120,15 @@ async def create_analysis(
         status="complete",
         provider=result.provider,
         model=result.model,
-        input_tokens=result.usage.input_tokens,
-        output_tokens=result.usage.output_tokens,
-        cached_input_tokens=result.usage.cached_input_tokens,
+        # Both stages bill, so usage is the sum rather than the last call's.
+        input_tokens=result.usage.input_tokens + gaps.usage.input_tokens,
+        output_tokens=result.usage.output_tokens + gaps.usage.output_tokens,
+        cached_input_tokens=(
+            result.usage.cached_input_tokens + gaps.usage.cached_input_tokens
+        ),
         profile=result.parsed.model_dump(mode="json"),
-        warnings=result.warnings,
+        findings=gaps.parsed.model_dump(mode="json"),
+        warnings=[*result.warnings, *gaps.warnings],
     )
     db.add(row)
     db.commit()

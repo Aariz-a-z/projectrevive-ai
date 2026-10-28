@@ -18,6 +18,7 @@ from pydantic import BaseModel
 
 from app.errors import LLMUnavailable
 from app.llm.base import StructuredResult, Usage
+from app.schemas.findings import GapAnalysis
 from app.schemas.project import (
     Claim,
     ClaimSource,
@@ -214,7 +215,29 @@ def build_project_profile(document_text: str) -> ProjectProfile:
     )
 
 
-_BUILDERS: dict[type[BaseModel], object] = {ProjectProfile: build_project_profile}
+MOCK_GAP_NOTE = (
+    "The deterministic mock provider cannot judge methodology, so it added no "
+    "findings of its own. Everything listed came from the automated rules, "
+    "which do not need a model. Set LLM_PROVIDER=anthropic for the model's "
+    "contribution."
+)
+
+
+def build_gap_analysis(document_text: str) -> GapAnalysis:
+    """Deliberately empty.
+
+    Keyword matching cannot tell whether a methodology is sound, and inventing
+    findings here would put unfounded criticism of someone's work in front of
+    them. The rule-based half of the gap analysis runs without a model and
+    carries this feature on its own.
+    """
+    return GapAnalysis(findings=[], notes=[MOCK_GAP_NOTE])
+
+
+_BUILDERS: dict[type[BaseModel], object] = {
+    ProjectProfile: build_project_profile,
+    GapAnalysis: build_gap_analysis,
+}
 
 
 class MockProvider:

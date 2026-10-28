@@ -13,6 +13,7 @@ Two things happen here that matter more than the prompt:
 
 from __future__ import annotations
 
+from app.analysis.verify import verify_evidence
 from app.llm.base import LLMProvider, StructuredResult
 from app.llm.sanitize import prepare
 from app.schemas.document import ExtractedDocument
@@ -45,25 +46,7 @@ shown to the user as evidence, so they must be checkable against the document.
 
 def _verify_claim(claim: Claim, document: ExtractedDocument) -> tuple[Claim, list[str]]:
     """Drop unverifiable citations; demote the claim if nothing survives."""
-    notes: list[str] = []
-    valid = []
-    for item in claim.evidence:
-        if item.page > document.page_count or item.page < 1:
-            notes.append(
-                f"Discarded a citation to page {item.page}, which does not exist "
-                f"in a {document.page_count}-page document."
-            )
-            continue
-        page = document.pages[item.page - 1]
-        haystack = " ".join(page.text.split()).lower()
-        needle = " ".join(item.quote.split()).lower()
-        if needle and needle not in haystack:
-            notes.append(
-                f"Discarded a quote attributed to page {item.page} that does not "
-                f"appear on that page: {item.quote[:60]!r}"
-            )
-            continue
-        valid.append(item)
+    valid, notes = verify_evidence(claim.evidence, document)
 
     if len(valid) == len(claim.evidence):
         return claim, notes

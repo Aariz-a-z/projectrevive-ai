@@ -81,8 +81,33 @@ export interface AnalysisSummary {
 export interface AnalysisDetail extends AnalysisSummary {
   content_type: string;
   profile: ProjectProfile;
+  findings: FindingsReport;
   claim_counts: { total: number; stated: number; inferred: number };
+  finding_counts: { high: number; medium: number; low: number };
+  finding_sources: { total: number; rule: number; model: number };
   warnings: string[];
+}
+
+export type FindingKind = "weakness" | "gap";
+export type Severity = "high" | "medium" | "low";
+export type DetectedBy = "rule" | "model";
+
+export interface Finding {
+  title: string;
+  category: string;
+  kind: FindingKind;
+  severity: Severity;
+  explanation: string;
+  evidence: Evidence[];
+  /** For a gap: what was looked for. An absence cannot be quoted. */
+  searched_for: string | null;
+  detected_by: DetectedBy;
+  rule_id: string | null;
+}
+
+export interface FindingsReport {
+  findings: Finding[];
+  notes: string[];
 }
 
 export interface UserPublic {
