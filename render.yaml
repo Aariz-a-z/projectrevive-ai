@@ -1,0 +1,70 @@
+# Render Blueprint for the backend.
+#
+# The frontend is not here: it goes to Vercel, which must stay the only origin
+# the browser talks to. See DEPLOYMENT.md -- the session cookie is SameSite=Lax
+# and a direct browser call to this service would be cross-site, so the cookie
+# would be silently dropped and every request would arrive anonymous.
+#
+# No database is declared here on purpose. Render's own free Postgres expires,
+# which is a bad surprise for a demo that is meant to keep working; point
+# DATABASE_URL at a managed Postgres instead (Neon and Supabase both have
+# non-expiring free tiers).
+
+services:
+  - type: web
+    name: projectrevive-api
+    runtime: docker
+    # free is valid for web services. Omitting `plan` would silently give you
+    # the paid starter tier.
+    plan: free
+
+    # The Dockerfile lives in backend/, so the service root moves there and
+    # the Docker paths below are relative to it.
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+
+    # This endpoint runs `SELECT 1`, so a healthy response means the database
+    # is genuinely reachable rather than just the process being alive.
+    healthCheckPath: /api/health
+
+    envVars:
+      # Render generates a base64-encoded 256-bit value, which clears the
+      # 32-byte minimum the app enforces at startup. It is only generated
+      # once, so redeploys keep existing sessions valid.
+      - key: SECRET_KEY
+        generateValue: true
+
+      # Set these two in the Render dashboard; they are deliberately not in
+      # version control. DATABASE_URL must begin postgresql:// (not
+      # postgres://, which SQLAlchemy rejects), and FRONTEND_ORIGIN is the
+      # Vercel URL, which does not exist until the frontend is deployed.
+      - key: DATABASE_URL
+        sync: false
+      - key: FRONTEND_ORIGIN
+        sync: false
+
+      # True because a free service runs exactly one instance, so there is no
+      # second process to race with at boot. On any plan that runs more than
+      # one instance set this to false and apply migrations as a deploy step,
+      # or concurrent migrations will race each other.
+      - key: AUTO_MIGRATE
+        value: "true"
+
+      # The service is reached over HTTPS, so the session cookie should never
+      # travel in clear.
+      - key: COOKIE_SECURE
+        value: "true"
+
+      # Render terminates TLS in front of the service and overwrites
+      # X-Forwarded-For, so the real client address arrives there. Without
+      # this every request looks like it came from the proxy, which makes the
+      # per-IP rate limits useless.
+      - key: TRUST_PROXY_HEADERS
+        value: "true"
+
+      # mock costs nothing and still produces the rule-based findings and
+      # recommendations. Switch to anthropic and add ANTHROPIC_API_KEY as a
+      # secret to enable the model-backed analysis.
+      - key: LLM_PROVIDER
+        value: mock

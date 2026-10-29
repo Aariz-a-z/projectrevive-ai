@@ -281,9 +281,10 @@ Checked against README section 12, honestly:
 | No fabricated performance claims | ✅ |
 | Setup and deployment documented | ✅ |
 
-Fourteen of fifteen. The outstanding one is deployment, which needs Vercel and
-Hugging Face accounts; [DEPLOYMENT.md](DEPLOYMENT.md) is the walkthrough, and
-it records which parts of it have been verified and which have not.
+Fourteen of fifteen. The outstanding one is deployment, which needs Vercel,
+Render and managed-Postgres accounts; [DEPLOYMENT.md](DEPLOYMENT.md) is the
+walkthrough, and it records which parts of it have been verified and which
+have not.
 
 ## Measured quality
 

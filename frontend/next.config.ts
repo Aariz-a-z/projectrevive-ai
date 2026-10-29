@@ -7,7 +7,8 @@ import type { NextConfig } from "next";
  * cross-site requests. In development that is invisible: localhost:3000 and
  * localhost:8000 differ only by port, so they are the same site and the
  * cookie is sent. In production the frontend and backend sit on different
- * registrable domains (vercel.app and hf.space are both public suffixes), so
+ * registrable domains (vercel.app and onrender.com are both public
+ * suffixes), so
  * the request is cross-site and the cookie would be dropped -- sign-in would
  * appear to succeed and every later request would be anonymous.
  *
