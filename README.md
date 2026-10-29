@@ -3,10 +3,15 @@
 Analyses an existing AI/ML project report and recommends evidence-based,
 explainable improvements.
 
-> **Status: accounts + analysis dashboard.** Create an account, upload a PDF or
-> DOCX, and read a structured project profile with page-cited evidence across a
-> tabbed dashboard. The recommendation engine, stack comparison, architecture
-> diagrams, roadmap and export are not built yet. See [Roadmap](#roadmap).
+[![CI](https://github.com/Aariz-a-z/projectrevive-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/Aariz-a-z/projectrevive-ai/actions/workflows/ci.yml)
+
+> **Status: feature-complete, not deployed.** Create an account, upload a PDF
+> or DOCX, and get a structured profile with page-cited evidence, detected
+> weaknesses and gaps, ranked recommendations, a stack comparison, before-and-
+> after architecture diagrams, a phased roadmap and a downloadable report.
+> Fourteen of the fifteen [MVP acceptance criteria](#mvp-acceptance-criteria)
+> are met; the outstanding one is a live deployment, which needs accounts only
+> you can create. See [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ## What works today
 
@@ -331,7 +336,7 @@ must display.
       UI. Pulled forward from the original "future features" list on request.
 - [x] **Rate limiting** — per-IP windows, per-account lockout, proxy-header
       hardening
-- [ ] **Phase 1** — remaining hardening: Alembic migrations, CI
+- [x] **Phase 1** — hardening: rate limits, Alembic migrations, CI
 - [x] **Real Anthropic provider** — structured outputs, refusal and truncation
       handling, prompt caching, server-side fallbacks
 - [x] **Phase 2** — weakness and gap analysis, rules plus model
@@ -340,8 +345,9 @@ must display.
       exportable report
 - [x] **Evaluation harness** — precision@K, NDCG@K, coverage, hybrid against
       two ablations, with the result reported as measured
-- [ ] **Phase 5** — accessibility pass, more evaluation cases from a second
-      annotator
+- [x] **Phase 5** — evaluation harness and accessibility pass
+- [ ] **Still open** — evaluation cases from a second annotator, and
+      frontend tests: the backend has 291, the frontend has none
 - [ ] **Phase 6** — deployment
 
 ## Licence
