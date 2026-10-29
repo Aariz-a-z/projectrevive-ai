@@ -200,14 +200,32 @@ cd backend && ./.venv/Scripts/python.exe -m pytest -q
 ```
 
 ```bash
-cd frontend && npm run lint && npm run build
+cd frontend && npm test && npm run lint && npm run build
 ```
 
-Tests generate real PDFs and DOCX files with reportlab and python-docx rather
-than committing binary fixtures, so the parsers are exercised on genuine
-documents. Failure paths covered: empty file, executable renamed `.pdf`,
-non-Word zip, truncated PDF, scanned PDF, over page budget, unverifiable
-citations, prompt injection, missing API credentials.
+336 tests in total, and [CI](.github/workflows/ci.yml) runs all of them on
+every push.
+
+**Backend (291).** Tests generate real PDFs and DOCX files with reportlab and
+python-docx rather than committing binary fixtures, so the parsers are
+exercised on genuine documents. Failure paths covered: empty file, executable
+renamed `.pdf`, non-Word zip, truncated PDF, scanned PDF, over page budget,
+unverifiable citations, prompt injection, missing API credentials, forged and
+expired session tokens, cross-account access, and rate-limit exhaustion.
+
+**Frontend (45).** Deliberately aimed at regressions that would be silent
+rather than loud:
+
+- The API client's request shape, which is what stops the cross-site cookie
+  bug returning. It broke nothing locally and would have broken sign-in in
+  production.
+- The ARIA tab wiring and keyboard navigation, since `role="tab"` alone looks
+  correct while doing none of the work.
+- Provenance rendering — the difference between "in report" and "inferred" is
+  this project's central claim, and a regression there would present a guess
+  as a fact without throwing.
+- The Mermaid failure path, which nobody exercises by hand because the
+  backend refuses to emit a diagram it cannot parse back.
 
 ## Configuration
 
@@ -346,8 +364,7 @@ must display.
 - [x] **Evaluation harness** — precision@K, NDCG@K, coverage, hybrid against
       two ablations, with the result reported as measured
 - [x] **Phase 5** — evaluation harness and accessibility pass
-- [ ] **Still open** — evaluation cases from a second annotator, and
-      frontend tests: the backend has 291, the frontend has none
+- [ ] **Still open** — evaluation cases from a second annotator
 - [ ] **Phase 6** — deployment
 
 ## Licence
