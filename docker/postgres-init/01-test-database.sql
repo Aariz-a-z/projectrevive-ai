@@ -1,0 +1,13 @@
+-- A second database, for the test suite only.
+--
+-- The suite drops every table in whatever TEST_DATABASE_URL names, so
+-- pointing it at the database the API is using means `docker compose
+-- --profile test run tests` silently destroys the running stack's data.
+-- Giving it its own database makes the two uses independent: the stack keeps
+-- its rows, and the suite still gets a real PostgreSQL to reset at will.
+--
+-- Runs only when the data volume is first initialised, which is what
+-- /docker-entrypoint-initdb.d means. On an existing volume it does not run,
+-- and the suite would fail to connect rather than quietly reusing the wrong
+-- database -- a visible failure instead of data loss.
+CREATE DATABASE projectrevive_test OWNER projectrevive;

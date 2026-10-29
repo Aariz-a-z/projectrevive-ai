@@ -50,3 +50,25 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
 sys.exit(0 if urllib.request.urlopen(f'http://127.0.0.1:{os.environ.get(\"PORT\",8000)}/api/health', timeout=4).status==200 else 1)"
 
 CMD ["python", "run.py"]
+
+# ---------------------------------------------------------------------------
+# Test image. Adds the development dependencies -- pytest above all -- which
+# the shipped image deliberately omits. docker-compose's `tests` service
+# builds this target; without it, running the suite in a container fails with
+# "No module named pytest", because mounting the test *files* does nothing
+# about the test *runner*.
+#
+# The test files themselves stay mounted rather than copied, so they never
+# reach either image.
+FROM base AS test
+USER root
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install ".[dev,postgres]"
+USER appuser
+
+# ---------------------------------------------------------------------------
+# The image that ships. Last on purpose: `docker build` with no --target
+# builds the final stage, and Hugging Face Spaces builds the Dockerfile
+# exactly that way. If the test stage were last, a deploy would quietly ship
+# the test dependencies.
+FROM base AS runtime

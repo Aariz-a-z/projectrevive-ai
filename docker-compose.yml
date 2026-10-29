@@ -26,6 +26,8 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      # Creates the separate test database on first initialisation.
+      - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       # Dependants wait for readiness rather than for the container to exist;
       # PostgreSQL accepts connections several seconds after it starts.
@@ -39,7 +41,7 @@ services:
     command: ["python", "-m", "alembic", "upgrade", "head"]
     environment:
       DATABASE_URL: postgresql://projectrevive:localdev@db:5432/projectrevive
-      SECRET_KEY: local-development-only
+      SECRET_KEY: local-development-only-not-a-real-secret
     depends_on:
       db:
         condition: service_healthy
@@ -50,7 +52,7 @@ services:
       - "8000:8000"
     environment:
       DATABASE_URL: postgresql://projectrevive:localdev@db:5432/projectrevive
-      SECRET_KEY: local-development-only
+      SECRET_KEY: local-development-only-not-a-real-secret
       # Off here as in production: migrations are a deliberate step, run by
       # the migrate service above.
       AUTO_MIGRATE: "false"
@@ -68,7 +70,10 @@ services:
   tests:
     # Only runs when asked for, so `docker compose up` does not start it.
     profiles: ["test"]
-    build: ./backend
+    # The `test` target, not the default one: the shipped image has no pytest.
+    build:
+      context: ./backend
+      target: test
     command: ["python", "-m", "pytest", "-q"]
     # .dockerignore keeps tests and the evaluation set out of the shipped
     # image, which is right for production and leaves this service with
@@ -78,10 +83,17 @@ services:
       - ./backend/tests:/app/tests:ro
       - ./backend/eval:/app/eval:ro
     environment:
-      # Separate from DATABASE_URL on purpose: the suite drops every table
-      # before running, and must never be pointed at real data by accident.
-      TEST_DATABASE_URL: postgresql://projectrevive:localdev@db:5432/projectrevive
-      SECRET_KEY: test-only
+      # A different database from the one `api` uses, not just a different
+      # variable name. The suite drops every table in whatever this names, so
+      # sharing one database would mean running the tests wipes the stack.
+      TEST_DATABASE_URL: postgresql://projectrevive:localdev@db:5432/projectrevive_test
+      SECRET_KEY: test-only-not-a-real-secret-key-value
+      # The image defaults this to true, which is right for a deployment and
+      # wrong here: the suite drives the app over http://testserver, and a
+      # Secure cookie is not stored on a plain-http origin. Left at the
+      # image's default, every authenticated request in the suite arrives
+      # anonymous -- 33 tests failed this way, all of them for this reason.
+      COOKIE_SECURE: "false"
     depends_on:
       db:
         condition: service_healthy

@@ -55,7 +55,7 @@ jobs:
         # a database that has never seen them.
         env:
           DATABASE_URL: sqlite:///./ci-check.db
-          SECRET_KEY: ci-only-not-a-real-key
+          SECRET_KEY: ci-only-not-a-real-key-padded-past-32-bytes
         run: |
           python -m alembic upgrade head
           python -m alembic downgrade base
@@ -95,7 +95,7 @@ jobs:
 
     env:
       PG_URL: postgresql://projectrevive:ci@localhost:5432/projectrevive
-      SECRET_KEY: ci-only-not-a-real-key
+      SECRET_KEY: ci-only-not-a-real-key-padded-past-32-bytes
 
     steps:
       - uses: actions/checkout@v4

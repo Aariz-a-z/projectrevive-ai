@@ -11,25 +11,22 @@ Every step below needs an account you own. Nothing here can be done for you.
 |---|---|
 | API proxy carries the session cookie | **Verified** — signed up through the proxy, confirmed `Set-Cookie` returns from the proxy origin with `HttpOnly; SameSite=lax`, and an authenticated request through it succeeds |
 | Frontend production build | **Verified** — `npm run build` passes |
-| Migrations against SQLite | **Verified** — fresh database built by migration on startup, 299 tests pass |
+| Migrations against SQLite | **Verified** — fresh database built by migration on startup, 307 tests pass |
 | Health check reports a lost database | **Verified** — returns 503 and `"database": "unreachable"` rather than claiming to be healthy |
-| **PostgreSQL** | **Verified in CI** — the full suite (299 tests) runs against PostgreSQL 17, and migrations upgrade, downgrade to base and upgrade again. See the `Backend against PostgreSQL` job. |
-| Docker image builds | **Not verified** — the Dockerfile has never been built, see below |
+| **PostgreSQL** | **Verified in CI** — the full suite (307 tests) runs against PostgreSQL 17, and migrations upgrade, downgrade to base and upgrade again. See the `Backend against PostgreSQL` job. |
+| Docker image builds and serves | **Verified** — image built, stack brought up on PostgreSQL 17, migrations applied, `/api/health` returned `"database": "ok"`, and the suite (307 tests) passed inside the container against that PostgreSQL |
 
-> **Docker could not be started on the development machine.**
-> `com.docker.service` is set to Manual start and launching it needs a
-> Windows elevation prompt that cannot be accepted from a terminal session.
-> This is a permission boundary, not a configuration problem.
+> **On `com.docker.service`.** That service is set to Manual start and
+> needs a Windows elevation prompt, which for a long time looked like the
+> reason the engine would not come up. It is not: it governs *Windows*
+> containers. The Linux engine runs in WSL2 and does not need it, and the
+> verification above was done with that service still stopped.
 >
-> To unblock it: open **Docker Desktop** from the Start menu and accept the
+> If the engine is down, open **Docker Desktop** and accept the
 > **"Do you want to allow this app to make changes to your device?"** prompt
-> (publisher: *Docker Inc.*). Wait until the whale icon stops animating and
-> Settings shows **Engine running**. If an error dialog appears instead, its
-> text is the thing to act on — it is not written to the log files.
->
-> PostgreSQL compatibility no longer depends on this: it is verified in CI
-> against a real PostgreSQL service container. Docker is only needed to build
-> the image locally, which `docker compose` at the repository root does.
+> (publisher: *Docker Inc.*). Error dialogs it raises are not written to its
+> log files, so their text has to be read off the screen.
+
 
 The Postgres half of that is now covered: the `Backend against PostgreSQL`
 job runs the whole suite and the migrations against a real PostgreSQL 17, so
@@ -37,18 +34,37 @@ the differences that used to surface only in production — stricter type
 handling, real transactional DDL, and `JSON` behaving differently from
 SQLite's loose storage — are exercised on every push.
 
-The image is the remaining gap. Once Docker starts, this builds it and proves
-the container serves:
+The image is covered too, and these are the commands that did it:
 
 ```bash
-docker compose up --build -d                    # db, migrations, then the API
+docker compose up -d --wait db                  # waits for pg_isready
+docker compose run --rm migrate                 # applies migrations
+docker compose up -d --build --wait api         # waits for the HEALTHCHECK
 curl http://localhost:8000/api/health
 docker compose --profile test run --rm tests    # the suite against that Postgres
-docker compose down -v
+docker compose down                             # keeps the data volume
 ```
 
-If `/api/health` answers `"database": "ok"`, the image and the migrations are
-sound together. Until that runs, treat the Dockerfile as unproven.
+`/api/health` answering `"database": "ok"` is the check that matters: the
+container's own HEALTHCHECK queries the database, so a reply means the image,
+the migrations and the connection all work together.
+
+Three things that were wrong here and are worth knowing, because each failed
+only in a container and not on the host:
+
+- The `tests` service builds the Dockerfile's **`test` target**. The shipped
+  image has no pytest, by design, so the default target cannot run the suite.
+- That service sets **`COOKIE_SECURE=false`**. The image defaults it to true,
+  which is right for a deployment, but the suite drives the app over plain
+  http, where a Secure cookie is never stored — every authenticated test
+  then runs anonymous.
+- It points at a **separate database** (`projectrevive_test`). The suite drops
+  every table in whatever it is given, so sharing the stack's database means
+  running the tests destroys the stack's data.
+
+Use `docker compose down` rather than `down -v` unless you mean to discard
+the database: `-v` deletes the `pgdata` volume, and with it the test database
+that the init script only creates when the volume is first made.
 
 ## The one thing that is easy to get wrong
 
@@ -116,7 +132,7 @@ visible in the UI):
 
 | Secret | Value |
 |---|---|
-| `SECRET_KEY` | A long random string. Generate: `python -c "import secrets; print(secrets.token_urlsafe(48))"` |
+| `SECRET_KEY` | A random string of **at least 32 bytes** — the app refuses to start below that, since the key length is the whole strength of the session cookie. Generate: `python -c "import secrets; print(secrets.token_urlsafe(48))"` |
 | `DATABASE_URL` | The `postgresql://` string from step 1 |
 | `ANTHROPIC_API_KEY` | Only if you want real analysis; otherwise leave the mock provider |
 | `FRONTEND_ORIGIN` | `https://your-app.vercel.app` |
@@ -159,8 +175,10 @@ In this order, because each step depends on the one before:
 2. Create an account. **Then reload the page.** If you are still signed in,
    the cookie is surviving, which is the whole point of the proxy. If you are
    signed out, the browser is reaching the backend directly somewhere.
-3. Upload `samples/sample_report.pdf`. You should get a profile, six findings
-   and twelve recommendations.
+3. Upload `samples/sample_report.pdf`. You should get a profile, **two
+   findings and five recommendations** (measured, on both SQLite and
+   PostgreSQL — an earlier draft of this file claimed six and twelve, which
+   was never true of this sample).
 4. Sign out, sign back in, and confirm the analysis is still listed.
 
 ## Known limitations

@@ -12,6 +12,7 @@ from pydantic import ValidationError
 
 from app.api.routes import analyses, health
 from app.auth import routes as auth_routes
+from app.auth.security import verify_signing_key
 from app.config import get_settings
 from app.db.migrate import ensure_schema
 from app.db.session import engine
@@ -22,6 +23,10 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Before anything can issue a session: a key too short to sign with is a
+    # configuration error, not a warning to scroll past.
+    verify_signing_key(get_settings())
+
     # Migrations, not create_all: the schema this process serves must be one
     # a migration produced, or the two diverge without anything noticing.
     ensure_schema(engine, get_settings())

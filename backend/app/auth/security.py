@@ -28,6 +28,11 @@ logger = logging.getLogger(__name__)
 _hasher = PasswordHasher()
 ALGORITHM = "HS256"
 
+# RFC 7518 section 3.2: an HMAC-SHA256 key must be at least as long as the
+# hash output. A shorter one is the weakest link in the session cookie,
+# because forging the signature forges the session.
+MIN_SECRET_KEY_BYTES = 32
+
 # Dev-only key file. Never committed; see .gitignore.
 _DEV_KEY_PATH = Path(__file__).resolve().parents[2] / ".secret_key"
 _warned = False
@@ -61,6 +66,39 @@ def resolve_secret_key(settings: Settings) -> str:
     generated = secrets.token_urlsafe(48)
     _DEV_KEY_PATH.write_text(generated, encoding="utf-8")
     return generated
+
+
+class WeakSigningKey(RuntimeError):
+    """An explicitly configured SECRET_KEY too short to sign sessions with."""
+
+
+def verify_signing_key(settings: Settings) -> None:
+    """Refuse to start when SECRET_KEY is too short for HS256.
+
+    PyJWT only emits `InsecureKeyLengthWarning` for this, which is one line in
+    a boot log among many and was in fact missed here until a container run
+    surfaced it. The consequence is not cosmetic: the key length is the entire
+    strength of the session cookie, so a guessable key lets anyone mint a
+    session for any account.
+
+    Checked at startup rather than on the first login, so a misconfigured
+    deployment fails while someone is still watching it, in the same spirit as
+    the schema check above it.
+
+    An unset key is not an error -- `resolve_secret_key` generates a strong
+    one and persists it for development.
+    """
+    key = settings.secret_key
+    if not key:
+        return
+
+    length = len(key.encode("utf-8"))
+    if length < MIN_SECRET_KEY_BYTES:
+        raise WeakSigningKey(
+            f"SECRET_KEY is {length} bytes; HS256 needs at least "
+            f"{MIN_SECRET_KEY_BYTES}. Generate one with: "
+            'python -c "import secrets; print(secrets.token_urlsafe(48))"'
+        )
 
 
 def hash_password(password: str) -> str:
