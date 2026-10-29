@@ -86,6 +86,7 @@ export interface AnalysisDetail extends AnalysisSummary {
   comparison: StackComparison;
   /** Null for analyses created before this output existed. */
   architecture: ArchitectureView | null;
+  roadmap: Roadmap;
   claim_counts: { total: number; stated: number; inferred: number };
   finding_counts: { high: number; medium: number; low: number };
   finding_sources: { total: number; rule: number; model: number };
@@ -216,6 +217,33 @@ export interface ArchitectureView {
   proposed: ComponentGraph;
   current_mermaid: string;
   proposed_mermaid: string;
+  notes: string[];
+}
+
+export type PhaseId = "trustworthy" | "improve" | "reproducible" | "ship";
+
+export interface RoadmapTask {
+  recommendation_id: string;
+  title: string;
+  why: string;
+  steps: string[];
+  deliverable: string;
+  validation: string;
+  complexity: Complexity;
+  dependencies: string[];
+  addresses_findings: string[];
+}
+
+export interface RoadmapPhase {
+  id: PhaseId;
+  order: number;
+  title: string;
+  rationale: string;
+  tasks: RoadmapTask[];
+}
+
+export interface Roadmap {
+  phases: RoadmapPhase[];
   notes: string[];
 }
 

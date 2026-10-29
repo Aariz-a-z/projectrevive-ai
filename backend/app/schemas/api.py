@@ -15,6 +15,7 @@ from app.schemas.project import ProjectProfile
 from app.schemas.architecture import ArchitectureView
 from app.schemas.comparison import StackComparison
 from app.schemas.recommendation import RecommendationReport
+from app.schemas.roadmap import Roadmap
 
 
 class UsageInfo(BaseModel):
@@ -54,6 +55,9 @@ class AnalysisDetail(AnalysisSummary):
     recommendations: RecommendationReport
     comparison: StackComparison
     architecture: ArchitectureView | None = None
+    #: Derived from the recommendations on read rather than stored, so it
+    #: always reflects the current phase ordering.
+    roadmap: Roadmap
     claim_counts: dict[str, int]
     finding_counts: dict[str, int] = Field(
         default_factory=dict,

@@ -49,9 +49,16 @@ explainable improvements.
   report did not describe it. The backend refuses to emit a diagram it cannot
   parse back, and the UI falls back to showing the source if Mermaid still
   rejects it.
+- A **phased roadmap** ordered so that work the later phases are measured
+  against happens first. No time estimates: how long any of it takes depends
+  on things this analysis cannot see, and a number invented here would be a
+  fabricated figure however carefully it was labelled.
+- An **exportable report** in Markdown covering all nine sections section 4.9
+  asks for, ending with exactly what was assumed, what could not be verified,
+  and what has not been measured.
 - A tabbed dashboard — Overview, Tech Stack, Architecture, Evaluation,
-  Findings, Recommendations, Evidence — including an evidence view that groups
-  every quote by the page it came from.
+  Findings, Recommendations, Roadmap, Evidence, Export — including an evidence
+  view that groups every quote by the page it came from.
 - **Every finding is labelled** as either stated in the report, with a page
   citation and verbatim quote you can open and check, or inferred, with the
   reasoning shown.
@@ -229,6 +236,32 @@ All settings come from the environment. See `backend/.env.example`.
 | Sentence Transformers | Pluggable embedder, TF-IDF default | PyTorch does not fit a free backend host. TF-IDF also serves as the content-only baseline the evaluation plan requires. |
 | Server-side PDF export | Markdown + print-ready HTML | Avoids a heavy PDF toolchain; browsers already print to PDF. |
 
+## MVP acceptance criteria
+
+Checked against README section 12, honestly:
+
+| Criterion | |
+|---|---|
+| Upload valid PDF and DOCX reports | ✅ |
+| Extracts and summarises project information | ✅ |
+| Distinguishes report evidence from inferred findings | ✅ enforced in the schema |
+| Identifies plausible improvement opportunities | ✅ 14 rules plus the model |
+| Hybrid engine ranks candidate improvements | ✅ |
+| Each recommendation has a reason and trade-offs | ✅ trade-offs are required, not optional |
+| Compares existing and proposed technologies | ✅ including "keep" as a verdict |
+| A proposed architecture diagram can be generated | ✅ from a validated graph |
+| A development roadmap can be created | ✅ four ordered phases |
+| A downloadable improvement report is available | ✅ Markdown, nine sections |
+| Important backend functions have automated tests | ✅ 291 tests |
+| Recommendation quality evaluated against a baseline | ✅ and the hybrid currently loses at K=3 |
+| **Deployed frontend and backend work together** | ❌ **not deployed** — needs accounts only you can create |
+| No fabricated performance claims | ✅ |
+| Setup and deployment documented | ✅ |
+
+Fourteen of fifteen. The outstanding one is deployment, which needs Vercel and
+Hugging Face accounts; [DEPLOYMENT.md](DEPLOYMENT.md) is the walkthrough, and
+it records which parts of it have been verified and which have not.
+
 ## Measured quality
 
 ```bash
@@ -303,9 +336,8 @@ must display.
       handling, prompt caching, server-side fallbacks
 - [x] **Phase 2** — weakness and gap analysis, rules plus model
 - [x] **Phase 3** — hybrid recommendation engine and knowledge base
-- [x] **Phase 4, part one** — stack comparison and Mermaid architecture
-- [ ] **Phase 4, part two** — development roadmap and the exportable report,
-      the last two MVP acceptance criteria outstanding
+- [x] **Phase 4** — stack comparison, Mermaid architecture, phased roadmap,
+      exportable report
 - [x] **Evaluation harness** — precision@K, NDCG@K, coverage, hybrid against
       two ablations, with the result reported as measured
 - [ ] **Phase 5** — accessibility pass, more evaluation cases from a second

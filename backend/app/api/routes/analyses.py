@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import re
 import uuid
 
 from fastapi import APIRouter, Depends, UploadFile
+from fastapi.responses import PlainTextResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -26,6 +28,8 @@ from app.schemas.api import (
 )
 from app.architecture.graph import build_view
 from app.compare.stack import compare_stack
+from app.report.markdown import render_markdown
+from app.roadmap.builder import build_roadmap
 from app.recommend.engine import recommend
 from app.schemas.findings import FindingsReport
 from app.schemas.project import ProjectProfile
@@ -80,6 +84,7 @@ def _to_detail(row: Analysis) -> AnalysisDetail:
         if row.architecture
         else None
     )
+    roadmap = build_roadmap(recommendations.recommendations)
     return AnalysisDetail(
         id=row.id,
         created_at=row.created_at,
@@ -94,6 +99,7 @@ def _to_detail(row: Analysis) -> AnalysisDetail:
         recommendations=recommendations,
         comparison=comparison,
         architecture=architecture,
+        roadmap=roadmap,
         claim_counts=profile.counts_by_source(),
         finding_counts=findings.by_severity(),
         finding_sources=findings.counts_by_source(),
@@ -155,7 +161,10 @@ async def create_analysis(
         recommendations=advice.model_dump(mode="json"),
         comparison=comparison.model_dump(mode="json"),
         architecture=architecture.model_dump(mode="json"),
-        warnings=[*result.warnings, *gaps.warnings],
+        # Deduplicated, order preserved. Both stages run through the same
+        # provider, so a provider-level caveat is raised by each of them and
+        # would otherwise be shown to the user twice.
+        warnings=list(dict.fromkeys([*result.warnings, *gaps.warnings])),
     )
     db.add(row)
     db.commit()
@@ -213,3 +222,52 @@ def delete_analysis(
         raise AnalysisNotFound()
     db.delete(row)
     db.commit()
+
+
+@router.get(
+    "/{analysis_id}/report.md",
+    response_class=PlainTextResponse,
+    responses={200: {"content": {"text/markdown": {}}}},
+)
+def download_report(
+    analysis_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> PlainTextResponse:
+    """The full improvement report as a Markdown download.
+
+    Generated on request rather than stored: it is a pure function of data
+    already persisted, and regenerating means an old analysis picks up
+    improvements to the report format instead of being frozen at whatever the
+    wording was on the day it ran.
+    """
+    row = db.get(Analysis, analysis_id)
+    if row is None or row.user_id != user.id:
+        raise AnalysisNotFound()
+
+    detail = _to_detail(row)
+    markdown = render_markdown(
+        filename=detail.filename,
+        created_at=detail.created_at,
+        page_count=detail.page_count,
+        provider=detail.provenance.provider,
+        model=detail.provenance.model,
+        profile=detail.profile,
+        findings=detail.findings,
+        recommendations=detail.recommendations,
+        comparison=detail.comparison,
+        architecture=detail.architecture,
+        roadmap=detail.roadmap,
+        warnings=detail.warnings,
+    )
+
+    stem = re.sub(r"[^a-z0-9]+", "-", (detail.title or "analysis").lower())
+    stem = stem.strip("-")[:60] or "analysis"
+
+    return PlainTextResponse(
+        content=markdown,
+        media_type="text/markdown; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="{stem}-report.md"'
+        },
+    )

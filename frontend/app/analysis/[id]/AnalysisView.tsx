@@ -8,7 +8,9 @@ import { ClaimChips, ClaimList, ClaimView } from "@/components/ClaimView";
 import { FindingCard } from "@/components/FindingCard";
 import {
   IconAlert,
+  IconBook,
   IconCode,
+  IconExport,
   IconLayers,
   IconQuote,
   IconSearch,
@@ -37,7 +39,9 @@ const TABS = [
   { id: "evaluation", label: "Evaluation", icon: <IconShield /> },
   { id: "findings", label: "Findings", icon: <IconAlert /> },
   { id: "recommendations", label: "Recommendations", icon: <IconLayers /> },
+  { id: "roadmap", label: "Roadmap", icon: <IconBook /> },
   { id: "evidence", label: "Evidence", icon: <IconQuote /> },
+  { id: "export", label: "Export", icon: <IconExport /> },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
@@ -674,6 +678,167 @@ export function AnalysisView() {
               </Panel>
             )}
           </div>
+        </div>
+      )}
+
+      {tab === "roadmap" && (
+        <div className="grid gap-5 lg:grid-cols-[1.55fr_0.45fr]">
+          <div className="space-y-4">
+            {analysis.roadmap.phases.length === 0 ? (
+              <Panel>
+                <div className="p-8 text-center text-sm text-muted">
+                  No recommendations were produced, so there is no plan.
+                </div>
+              </Panel>
+            ) : (
+              analysis.roadmap.phases.map((phase) => (
+                <Panel key={phase.id}>
+                  <PanelHeader
+                    title={`Phase ${phase.order}: ${phase.title}`}
+                    icon={<IconBook />}
+                    accent={phase.order === 1 ? "green" : "cyan"}
+                    right={<Badge accent="cyan">{phase.tasks.length}</Badge>}
+                  />
+                  <div className="space-y-3 p-4">
+                    <p className="border-l-2 border-cyan pl-3 text-xs leading-relaxed text-muted italic">
+                      {phase.rationale}
+                    </p>
+                    <ol className="space-y-2">
+                      {phase.tasks.map((task) => (
+                        <li
+                          key={task.recommendation_id}
+                          className="panel-inset rounded-lg p-3"
+                        >
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <p className="text-sm font-medium">{task.title}</p>
+                            <Badge
+                              accent={
+                                task.complexity === "low"
+                                  ? "green"
+                                  : task.complexity === "medium"
+                                    ? "amber"
+                                    : "rose"
+                              }
+                            >
+                              {task.complexity}
+                            </Badge>
+                          </div>
+                          <p className="mt-1.5 text-xs leading-relaxed text-muted">
+                            <span className="text-fg-dim">Done when:</span>{" "}
+                            {task.validation}
+                          </p>
+                          {task.dependencies.length > 0 && (
+                            <p className="mt-1.5 font-mono text-[10px] text-muted">
+                              needs {task.dependencies.join(", ")}
+                            </p>
+                          )}
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                </Panel>
+              ))
+            )}
+          </div>
+
+          <div className="space-y-5">
+            <Panel>
+              <PanelHeader title="Effort" icon={<IconShield />} accent="violet" />
+              <div className="space-y-2 p-4">
+                {(["low", "medium", "high"] as const).map((level) => {
+                  const count = analysis.roadmap.phases
+                    .flatMap((p) => p.tasks)
+                    .filter((t) => t.complexity === level).length;
+                  return (
+                    <div
+                      key={level}
+                      className="flex items-center justify-between text-xs"
+                    >
+                      <span className="text-muted capitalize">{level}</span>
+                      <span className="font-mono text-fg-dim">{count}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </Panel>
+
+            <Panel>
+              <PanelHeader
+                title="About this plan"
+                icon={<IconAlert />}
+                accent="amber"
+              />
+              <ul className="space-y-2 p-4 text-[11px] leading-relaxed text-muted">
+                {analysis.roadmap.notes.map((note, index) => (
+                  <li key={index} className="border-l-2 border-amber pl-3">
+                    {note}
+                  </li>
+                ))}
+              </ul>
+            </Panel>
+          </div>
+        </div>
+      )}
+
+      {tab === "export" && (
+        <div className="mx-auto max-w-2xl space-y-5">
+          <Panel>
+            <PanelHeader
+              title="Download the improvement report"
+              icon={<IconExport />}
+              accent="green"
+            />
+            <div className="space-y-4 p-5">
+              <p className="text-sm leading-relaxed text-fg-dim">
+                Everything in this analysis as a single Markdown file: the
+                project summary, the methodology, every finding with its
+                evidence, the ranked recommendations with their trade-offs, the
+                stack comparison, both architecture diagrams, the roadmap and
+                a testing plan — followed by exactly what was assumed and what
+                has not been measured.
+              </p>
+
+              <ol className="space-y-1.5 text-xs text-muted">
+                {[
+                  "Original project summary",
+                  "Extracted methodology",
+                  "Identified weaknesses and gaps",
+                  "Ranked recommendations",
+                  "Technology comparison",
+                  "Proposed architecture",
+                  "Development roadmap",
+                  "Testing and evaluation plan",
+                  "Assumptions and limitations",
+                ].map((section, index) => (
+                  <li key={section} className="flex gap-2">
+                    <span className="font-mono text-cyan">{index + 1}.</span>
+                    {section}
+                  </li>
+                ))}
+              </ol>
+
+              <div className="flex flex-wrap items-center gap-3 pt-1">
+                <a
+                  href={`/api/analyses/${analysis.id}/report.md`}
+                  download
+                  className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-cyan to-blue px-4 py-2 text-sm font-semibold text-[#04121c] hover:brightness-110"
+                >
+                  <IconExport className="h-4 w-4" />
+                  Download Markdown
+                </a>
+                <span className="text-xs text-muted">
+                  Renders on GitHub, converts with pandoc, prints from any
+                  editor.
+                </span>
+              </div>
+            </div>
+          </Panel>
+
+          <Notice tone="info" title="Why Markdown rather than PDF">
+            A PDF would need a rendering toolchain this service does not
+            otherwise use, and would be harder to diff, edit or paste into
+            your own report. The Mermaid diagrams render natively on GitHub.
+          </Notice>
         </div>
       )}
 
