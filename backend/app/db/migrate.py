@@ -73,6 +73,11 @@ def upgrade_to_head(database_url: str | None = None) -> None:
     command.upgrade(alembic_config(database_url), "head")
 
 
+def downgrade_to_base(database_url: str | None = None) -> None:
+    """Tear the schema back down. Tests only; never call this on real data."""
+    command.downgrade(alembic_config(database_url), "base")
+
+
 def ensure_schema(engine: Engine, settings: Settings) -> None:
     """Make the database match this code, or refuse to continue."""
     head = head_revision()

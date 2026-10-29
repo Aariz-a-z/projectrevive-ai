@@ -17,8 +17,18 @@ from pathlib import Path
 
 import pytest
 
+# The suite runs against SQLite by default. Setting TEST_DATABASE_URL points
+# it at a real database instead, which is how CI exercises PostgreSQL.
+#
+# A separate variable rather than DATABASE_URL on purpose: the fixtures below
+# drop every table before running, so reading the application's own setting
+# here would mean an exported DATABASE_URL -- the one pointing at real data --
+# silently became the thing this suite wipes.
 _TMP_DB = Path(tempfile.gettempdir()) / "projectrevive_test.db"
-os.environ["DATABASE_URL"] = f"sqlite:///{_TMP_DB.as_posix()}"
+_EXTERNAL_DB = os.environ.get("TEST_DATABASE_URL", "").strip()
+USING_EXTERNAL_DB = bool(_EXTERNAL_DB)
+
+os.environ["DATABASE_URL"] = _EXTERNAL_DB or f"sqlite:///{_TMP_DB.as_posix()}"
 os.environ["LLM_PROVIDER"] = "mock"
 os.environ["ANTHROPIC_API_KEY"] = ""
 # Fixed so tests never write the development .secret_key file.
@@ -26,7 +36,7 @@ os.environ["SECRET_KEY"] = "test-only-signing-key-not-used-outside-the-suite"
 
 from fastapi.testclient import TestClient  # noqa: E402
 
-from app.db.migrate import upgrade_to_head  # noqa: E402
+from app.db.migrate import downgrade_to_base, upgrade_to_head  # noqa: E402
 from app.db.session import engine  # noqa: E402
 from app.main import create_app  # noqa: E402
 from app.ratelimit.deps import reset_all  # noqa: E402
@@ -98,11 +108,21 @@ def _database() -> Iterator[None]:
     Using create_all here instead would mean the migration path is never
     exercised by the suite, and would also collide with the startup check,
     which migrates and would find tables it did not create.
+
+    Against an external database the schema is torn down first. Several tests
+    register fixed email addresses, and the unique index on them would make a
+    second run fail with collisions rather than with anything meaningful.
     """
-    upgrade_to_head(os.environ["DATABASE_URL"])
+    url = os.environ["DATABASE_URL"]
+    if USING_EXTERNAL_DB:
+        downgrade_to_base(url)
+    upgrade_to_head(url)
+
     yield
+
     engine.dispose()
-    _TMP_DB.unlink(missing_ok=True)
+    if not USING_EXTERNAL_DB:
+        _TMP_DB.unlink(missing_ok=True)
 
 
 @pytest.fixture(autouse=True)

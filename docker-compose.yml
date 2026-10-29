@@ -1,0 +1,90 @@
+# Local stack with a real PostgreSQL, for verifying what a deployment will
+# actually run on.
+#
+# The application is developed against SQLite, which is forgiving in ways
+# PostgreSQL is not: it ignores VARCHAR lengths, stores datetimes as text, and
+# has no opinion about transactional DDL. Those differences surface at the
+# worst possible moment unless something exercises them, and this is that
+# something.
+#
+#   docker compose up -d db                      # just the database
+#   docker compose run --rm migrate              # apply migrations to it
+#   docker compose up --build api                # the API on top of it
+#   docker compose --profile test run --rm tests # the suite against PostgreSQL
+#
+# Nothing here is used in production. The deployed backend talks to a managed
+# PostgreSQL; see DEPLOYMENT.md.
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: projectrevive
+      POSTGRES_PASSWORD: localdev
+      POSTGRES_DB: projectrevive
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # Dependants wait for readiness rather than for the container to exist;
+      # PostgreSQL accepts connections several seconds after it starts.
+      test: ["CMD-SHELL", "pg_isready -U projectrevive -d projectrevive"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  migrate:
+    build: ./backend
+    command: ["python", "-m", "alembic", "upgrade", "head"]
+    environment:
+      DATABASE_URL: postgresql://projectrevive:localdev@db:5432/projectrevive
+      SECRET_KEY: local-development-only
+    depends_on:
+      db:
+        condition: service_healthy
+
+  api:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://projectrevive:localdev@db:5432/projectrevive
+      SECRET_KEY: local-development-only
+      # Off here as in production: migrations are a deliberate step, run by
+      # the migrate service above.
+      AUTO_MIGRATE: "false"
+      # The container is reached over plain HTTP locally, so a Secure cookie
+      # would never be sent back.
+      COOKIE_SECURE: "false"
+      LLM_PROVIDER: mock
+      FRONTEND_ORIGIN: http://localhost:3000
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  tests:
+    # Only runs when asked for, so `docker compose up` does not start it.
+    profiles: ["test"]
+    build: ./backend
+    command: ["python", "-m", "pytest", "-q"]
+    # .dockerignore keeps tests and the evaluation set out of the shipped
+    # image, which is right for production and leaves this service with
+    # nothing to run. Mounting them read-only is the fix; building a second
+    # image just to carry test files would be worse.
+    volumes:
+      - ./backend/tests:/app/tests:ro
+      - ./backend/eval:/app/eval:ro
+    environment:
+      # Separate from DATABASE_URL on purpose: the suite drops every table
+      # before running, and must never be pointed at real data by accident.
+      TEST_DATABASE_URL: postgresql://projectrevive:localdev@db:5432/projectrevive
+      SECRET_KEY: test-only
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
