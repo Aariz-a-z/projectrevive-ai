@@ -39,7 +39,8 @@ def extract(data: bytes, filename: str, settings: Settings) -> ExtractedDocument
                 f"That document has {pages_total} pages, over the "
                 f"{settings.max_pages} page limit."
             )
-        pages, looks_scanned = pdf_backend.extract_pdf(data)
+        # Pass the count we already have, rather than paying to count again.
+        pages, looks_scanned = pdf_backend.extract_pdf(data, total=pages_total)
     else:
         pages = extract_docx(data)
 
