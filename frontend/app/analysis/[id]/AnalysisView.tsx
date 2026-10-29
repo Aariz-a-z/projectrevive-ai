@@ -19,6 +19,7 @@ import {
 import { MermaidDiagram } from "@/components/MermaidDiagram";
 import { RecommendationCard } from "@/components/RecommendationCard";
 import { StackList } from "@/components/StackList";
+import { TabList, TabPanel } from "@/components/Tabs";
 import {
   Badge,
   Notice,
@@ -225,34 +226,15 @@ export function AnalysisView() {
         />
       </div>
 
-      <div
-        role="tablist"
-        aria-label="Analysis sections"
-        className="flex flex-wrap gap-1 rounded-xl border border-edge bg-panel-inset p-1"
-      >
-        {TABS.map((item) => {
-          const active = tab === item.id;
-          return (
-            <button
-              key={item.id}
-              role="tab"
-              aria-selected={active}
-              onClick={() => setTab(item.id)}
-              className={`flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm transition-colors ${
-                active
-                  ? "bg-panel-raised font-medium text-fg shadow-sm ring-1 ring-edge-bright"
-                  : "text-muted hover:text-fg-dim"
-              }`}
-            >
-              <span className={`h-4 w-4 ${active ? "text-cyan" : ""}`}>
-                {item.icon}
-              </span>
-              {item.label}
-            </button>
-          );
-        })}
-      </div>
+      <TabList
+        tabs={TABS}
+        active={tab}
+        onChange={setTab}
+        label="Analysis sections"
+        idPrefix="analysis"
+      />
 
+      <TabPanel id={tab} idPrefix="analysis" active>
       {tab === "overview" && (
         <div className="grid gap-5 lg:grid-cols-[1.4fr_0.6fr]">
           <Panel>
@@ -888,6 +870,7 @@ export function AnalysisView() {
           </div>
         </Panel>
       )}
+      </TabPanel>
     </div>
   );
 }

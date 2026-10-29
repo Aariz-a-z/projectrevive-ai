@@ -29,8 +29,26 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         />
         <AuthProvider>
           <div className="flex min-h-screen flex-col">
+            {/*
+              First focusable element on every page. Without it, reaching the
+              content means tabbing through the whole header each time, which
+              is the single most tiring thing about navigating a site by
+              keyboard. Visually hidden until focused.
+            */}
+            <a
+              href="#main"
+              className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50 focus:rounded-lg focus:bg-cyan focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-[#04121c]"
+            >
+              Skip to main content
+            </a>
             <SiteHeader />
-            <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
+            <main
+              id="main"
+              // Focusable target so the skip link actually moves focus, not
+              // just the viewport.
+              tabIndex={-1}
+              className="mx-auto w-full max-w-6xl flex-1 px-4 py-8"
+            >
               {children}
             </main>
             <footer className="border-t border-edge">

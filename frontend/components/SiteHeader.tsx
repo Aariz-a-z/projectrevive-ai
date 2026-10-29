@@ -11,11 +11,20 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-30 border-b border-edge bg-[#070b16]/85 backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
-        <Link href="/" className="flex items-center gap-2.5">
-          <span className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-cyan to-violet text-[#04121c]">
+        <Link
+          href="/"
+          aria-label="ProjectRevive AI, home"
+          className="flex shrink-0 items-center gap-2 sm:gap-2.5"
+        >
+          <span
+            aria-hidden="true"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-cyan to-violet text-[#04121c]"
+          >
             <IconSpark className="h-5 w-5" />
           </span>
-          <span className="text-base font-semibold tracking-tight">
+          {/* nowrap: at 375px the brand otherwise wraps onto two lines and
+              pushes the header to double height. */}
+          <span className="text-sm font-semibold tracking-tight whitespace-nowrap sm:text-base">
             ProjectRevive <span className="grad-text">AI</span>
           </span>
         </Link>
@@ -35,9 +44,11 @@ export function SiteHeader() {
               </Link>
               <Link
                 href="/signup"
-                className="rounded-lg bg-gradient-to-r from-cyan to-blue px-3.5 py-1.5 font-semibold text-[#04121c] hover:brightness-110"
+                className="rounded-lg bg-gradient-to-r from-cyan to-blue px-3 py-1.5 font-semibold whitespace-nowrap text-[#04121c] hover:brightness-110 sm:px-3.5"
               >
-                Create account
+                {/* Short form on phones, where the full label forces a wrap. */}
+                <span className="sm:hidden">Sign up</span>
+                <span className="hidden sm:inline">Create account</span>
               </Link>
             </>
           )}

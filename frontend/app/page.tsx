@@ -51,29 +51,29 @@ const FEATURES: {
     icon: <IconAlert />,
     accent: "amber",
     title: "Weakness and gap analysis",
-    body: "Finds missing evaluation, leakage risk, unsuitable metrics and absent testing.",
-    ready: false,
+    body: "14 deterministic rules plus the model find missing evaluation, leakage risk, unsuitable metrics and absent testing.",
+    ready: true,
   },
   {
     icon: <IconLayers />,
     accent: "cyan",
     title: "Ranked recommendations",
     body: "Matches your project against a catalogue of improvements, filtered by what is actually feasible for you.",
-    ready: false,
+    ready: true,
   },
   {
     icon: <IconBook />,
     accent: "violet",
     title: "Architecture and roadmap",
-    body: "A proposed architecture diagram and a phased plan, generated from structured data rather than prose.",
-    ready: false,
+    body: "Before-and-after diagrams generated from a validated component graph, and a phased plan ordered so later work is measured against earlier work.",
+    ready: true,
   },
   {
     icon: <IconExport />,
     accent: "green",
     title: "Exportable report",
-    body: "Download the full improvement report with evidence, trade-offs and a testing plan.",
-    ready: false,
+    body: "The whole analysis as Markdown: evidence, trade-offs, a testing plan, and what was assumed or not measured.",
+    ready: true,
   },
 ];
 
@@ -177,8 +177,9 @@ export default function Home() {
               What it does
             </h2>
             <p className="mt-1 text-sm text-muted">
-              Shipped features are marked live. The rest are being built and are
-              listed so you know what is coming, not to imply they already work.
+              Everything listed here is built and runs today. Anything still
+              being worked on would be marked as such rather than listed as if
+              it already worked.
             </p>
           </div>
         </div>
