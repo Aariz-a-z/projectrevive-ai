@@ -11,31 +11,44 @@ Every step below needs an account you own. Nothing here can be done for you.
 |---|---|
 | API proxy carries the session cookie | **Verified** — signed up through the proxy, confirmed `Set-Cookie` returns from the proxy origin with `HttpOnly; SameSite=lax`, and an authenticated request through it succeeds |
 | Frontend production build | **Verified** — `npm run build` passes |
-| Migrations against SQLite | **Verified** — fresh database built by migration on startup, 221 tests pass |
+| Migrations against SQLite | **Verified** — fresh database built by migration on startup, 299 tests pass |
 | Health check reports a lost database | **Verified** — returns 503 and `"database": "unreachable"` rather than claiming to be healthy |
+| **PostgreSQL** | **Verified in CI** — the full suite (299 tests) runs against PostgreSQL 17, and migrations upgrade, downgrade to base and upgrade again. See the `Backend against PostgreSQL` job. |
 | Docker image builds | **Not verified** — the Dockerfile has never been built, see below |
-| Postgres | **Not verified** — the driver is installed and SQLAlchemy resolves `postgresql://` to psycopg 3, but it has never connected to a real server |
 
-> Docker could not be started from this machine without administrator rights:
-> `com.docker.service` is set to Manual start and launching it needs a UAC
-> prompt. Start Docker Desktop yourself and accept the elevation prompt, then
-> the two commands below will run.
+> **Docker could not be started on the development machine.**
+> `com.docker.service` is set to Manual start and launching it needs a
+> Windows elevation prompt that cannot be accepted from a terminal session.
+> This is a permission boundary, not a configuration problem.
+>
+> To unblock it: open **Docker Desktop** from the Start menu and accept the
+> **"Do you want to allow this app to make changes to your device?"** prompt
+> (publisher: *Docker Inc.*). Wait until the whale icon stops animating and
+> Settings shows **Engine running**. If an error dialog appears instead, its
+> text is the thing to act on — it is not written to the log files.
+>
+> PostgreSQL compatibility no longer depends on this: it is verified in CI
+> against a real PostgreSQL service container. Docker is only needed to build
+> the image locally, which `docker compose` at the repository root does.
 
-The second two matter. SQLite and Postgres differ in ways that surface exactly
-here: stricter type handling, real transactional DDL, and `JSON` behaving
-differently from SQLite's loose storage. **Build the image and run the
-migrations against Postgres locally before trusting a deployment:**
+The Postgres half of that is now covered: the `Backend against PostgreSQL`
+job runs the whole suite and the migrations against a real PostgreSQL 17, so
+the differences that used to surface only in production — stricter type
+handling, real transactional DDL, and `JSON` behaving differently from
+SQLite's loose storage — are exercised on every push.
+
+The image is the remaining gap. Once Docker starts, this builds it and proves
+the container serves:
 
 ```bash
-cd backend
-docker build -t projectrevive-api:local .
-docker run -d --name pg -e POSTGRES_PASSWORD=dev -p 5432:5432 postgres:17
-DATABASE_URL='postgresql://postgres:dev@localhost:5432/postgres' \
-  ./.venv/Scripts/python.exe -m alembic upgrade head
+docker compose up --build -d                    # db, migrations, then the API
+curl http://localhost:8000/api/health
+docker compose --profile test run --rm tests    # the suite against that Postgres
+docker compose down -v
 ```
 
-If that upgrade succeeds, the schema is Postgres-compatible. If the image
-builds and `/api/health` answers, the container is sound.
+If `/api/health` answers `"database": "ok"`, the image and the migrations are
+sound together. Until that runs, treat the Dockerfile as unproven.
 
 ## The one thing that is easy to get wrong
 
@@ -78,10 +91,25 @@ rather than something the app does at boot — see `AUTO_MIGRATE` below.
 
 ## 2. Backend on Hugging Face Spaces
 
-Create a Space with the **Docker** SDK. Push this repository to it, or point
-it at the GitHub repository. The Space builds `backend/Dockerfile`.
+Create a Space with the **Docker** SDK.
 
-Spaces serve on port 7860, which the image already honours through `$PORT`.
+Spaces require the `Dockerfile` **and** a `README.md` with YAML frontmatter at
+the *root of the Space repository*, while here the Dockerfile lives in
+`backend/`. Rather than keep a second Dockerfile at the repository root — two
+files that would drift apart — push the `backend/` subtree as the Space:
+
+```bash
+git remote add hf https://huggingface.co/spaces/<your-username>/<space-name>
+git subtree push --prefix backend hf main
+```
+
+`backend/` then *is* the Space: `backend/README.md` already carries the
+required frontmatter, and `backend/Dockerfile` sits beside it. Nothing is
+duplicated, and later deploys are the same one command.
+
+`app_port` in that frontmatter is `8000`, matching the Dockerfile's own
+default, so the service listens where the Space expects without depending on
+the platform injecting `PORT`.
 
 Set these as **Secrets** in Space settings (not Variables — Variables are
 visible in the UI):
