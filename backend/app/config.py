@@ -72,7 +72,17 @@ class Settings(BaseSettings):
 
     # --- Upload limits (README section 10) ---
     max_upload_mb: int = 20
-    max_pages: int = 300
+    # 300 until this was measured against a real deployment, where it was not
+    # a limit at all: analysis runs synchronously inside the request, so the
+    # page count decides how long one request occupies the only worker. On a
+    # free Render instance 15 pages took 33 seconds and 20 pages killed the
+    # service outright, taking the whole site down with it.
+    #
+    # 50 is what a capable host manages comfortably. It is deliberately a
+    # setting rather than a constant, because the right value depends on the
+    # instance: see MAX_PAGES in render.yaml, which lowers it for the free
+    # tier. Raising it is safe only once analysis stops blocking the request.
+    max_pages: int = 50
     extraction_timeout_seconds: int = 60
 
     # --- Optional features ---

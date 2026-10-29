@@ -68,3 +68,21 @@ services:
       # secret to enable the model-backed analysis.
       - key: LLM_PROVIDER
         value: mock
+
+      # Measured against this exact tier, not guessed. Analysis runs inside
+      # the request on one worker with a 0.1 CPU share, so the page count
+      # decides how long the service is unavailable to everyone else:
+      #
+      #    5 pages ->  2s      15 pages -> 33s
+      #   10 pages -> 20s      20 pages -> service killed, ~1 min to recover
+      #
+      # 10 keeps a request near 20 seconds and leaves margin before the point
+      # where the instance dies. An over-long document is refused in 0.1s
+      # with a clear message, because the page count is read without
+      # extracting any text.
+      #
+      # This is a property of the instance, not of the application. Raise it
+      # on a larger plan, and raise it properly by moving analysis off the
+      # request -- the schema already carries the status column for that.
+      - key: MAX_PAGES
+        value: "10"

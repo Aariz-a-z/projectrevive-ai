@@ -24,9 +24,9 @@ Every step below needs an account you own. Nothing here can be done for you.
 | Docker image builds and serves | **Verified in CI** — the `Backend image builds and serves` job builds the image, applies migrations to PostgreSQL 17, checks `/api/health` answers `"database": "ok"`, analyses the sample report end to end, runs the suite inside the container, and asserts the shipped image carries no test dependencies |
 | **Fits a 512MB instance** | **Verified** — in a container capped at 512MB, 250-page and 300-page uploads both returned 201. Both were OOM-killed before the extraction fix |
 | Production settings boot | **Verified** — the shipped image starts with `AUTO_MIGRATE=false`, `COOKIE_SECURE=true` and `TRUST_PROXY_HEADERS=true`, and issues `HttpOnly; SameSite=lax; Secure` |
-| **A live deployment** | **Not verified — nothing is deployed.** Everything above was measured locally or in CI |
-| Cookie withheld over plain HTTP | **Not verified** — `Secure` is set, but showing a client refuse to send it needs a real non-localhost origin. `localhost` is a secure context, so curl and browsers both send it there |
-| Render's request timeout | **Not verified** — see Known limitations. A 300-page analysis takes 100s on a fast machine and Render's free CPU is slower |
+| **A live deployment** | **Verified** — live at https://projectrevive-ai.vercel.app. The proxy reaches Render, Render reaches its Postgres (`"database": "ok"`), signup over HTTPS returns the session cookie as `HttpOnly; SameSite=lax; Secure`, an authenticated request with it returns 200, the analysis persists and reads back, and the report exports at 31,917 bytes |
+| Cookie withheld over plain HTTP | **Moot in production** — plain HTTP returns 308 to HTTPS and HSTS is set to two years with `includeSubDomains; preload`, so no request travels in clear for the flag to matter |
+| **Capacity on the free tier** | **Measured, and it is the binding constraint** — 5 pages 2s, 10 pages 20s, 15 pages 33s, 20 pages kills the service. See Known limitations |
 
 > **On `com.docker.service`,** for anyone verifying locally on Windows: it is
 > set to Manual start and needs an elevation prompt, which looks like the
@@ -176,14 +176,25 @@ the init script only creates when the volume is first made.
 - **The service sleeps after 15 minutes idle.** The first request afterwards
   waits roughly a minute for a cold start. For a portfolio demo this mostly
   means warning anyone you send the link to.
-- **Long documents are slow, and may be too slow.** A 300-page analysis takes
-  about 100 seconds on a fast machine; Render's free CPU is shared and
-  slower. Render's free-tier request timeout could not be confirmed — reports
-  range from 15 seconds to 100 minutes with no official current figure — so
-  **test a long upload on the real instance before relying on it.** If it
-  times out, the fix is to move analysis off the request: accept the upload,
-  return an id, and have the client poll. The schema already carries a
-  `status` column for exactly that.
+- **Analysis blocks the whole service, and that is the real limit.** It runs
+  synchronously inside the request on one worker with a 0.1 CPU share, so
+  while one upload is being analysed nobody else can use the site at all.
+  Measured against the live free instance:
+
+  | Pages | Request | Service during it |
+  |---|---|---|
+  | 5 | 201 in 2s | fine |
+  | 10 | 201 in 20s | mostly unreachable |
+  | 15 | 201 in 33s | 1 of 14 health checks succeeded |
+  | 20 | **killed the service**, ~1 minute to recover | down |
+
+  `MAX_PAGES` is therefore `10` in `render.yaml` — not a guess, and not a
+  property of the application. An over-long document is refused in 0.1s with
+  a clear message, because the page count is read without extracting any
+  text. **The limit is a stopgap.** The real fix is to move analysis off the
+  request: accept the upload, return an id, and have the client poll. The
+  schema already carries a `status` column for exactly that, and until it is
+  done, one visitor uploading a normal-sized report takes the site down.
 - **Memory is bounded, not generous.** Extraction peaks around 150MB for a
   300-page document, on a 512MB instance that also holds the application. It
   fits with room to spare, and `backend/tests/test_extraction_memory.py`

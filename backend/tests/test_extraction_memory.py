@@ -36,6 +36,7 @@ import pytest
 from app.config import Settings
 from app.documents import pdf as pdf_backend
 from app.documents.extract import extract
+from app.errors import DocumentTooLong
 from tests.conftest import make_pdf
 
 PAGES = pdf_backend.PAGE_BATCH * 3 + 2  # spans several batches, ends partway
@@ -123,6 +124,74 @@ class TestBatching:
         extract(_many_pages(4), "r.pdf", Settings(llm_provider="mock"))
 
         assert calls == 1, "the page count should be taken once, not twice"
+
+
+class TestPageBudgetIsACheapGuard:
+    """The page budget is what stands between an upload and a dead service.
+
+    Bounding memory was not enough. Analysis still runs synchronously inside
+    the request, so on a small instance the page count decides how long one
+    upload occupies the only worker. Measured on a free Render instance: 10
+    pages took 20 seconds, 15 took 33, and 20 killed the service for about a
+    minute -- for everyone, not just the uploader.
+
+    So the budget has to be refused before any of the expensive work starts.
+    """
+
+    def test_an_over_long_document_is_refused_without_extracting_it(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A guard that does the work first is not a guard.
+
+        Rejecting costs 0.1s and no measurable memory, because counting pages
+        parses the page tree without building any char objects.
+        """
+        extracted = False
+        real = pdf_backend.extract_pdf
+
+        def spy(*args: object, **kwargs: object) -> object:
+            nonlocal extracted
+            extracted = True
+            return real(*args, **kwargs)  # type: ignore[arg-type]
+
+        monkeypatch.setattr(pdf_backend, "extract_pdf", spy)
+
+        with pytest.raises(DocumentTooLong):
+            extract(
+                _many_pages(PAGES),
+                "long.pdf",
+                Settings(llm_provider="mock", max_pages=5),
+            )
+
+        assert not extracted, (
+            "the document was extracted before being rejected, which is the "
+            "expensive path the limit exists to avoid"
+        )
+
+    def test_the_message_names_both_numbers(self) -> None:
+        """"Too long" without the numbers leaves the user guessing."""
+        with pytest.raises(DocumentTooLong) as excinfo:
+            extract(
+                _many_pages(8), "long.pdf", Settings(llm_provider="mock", max_pages=5)
+            )
+
+        message = str(excinfo.value)
+        assert "8" in message and "5" in message, message
+
+    def test_the_default_budget_suits_a_synchronous_request(self) -> None:
+        """Guards against quietly restoring the old 300.
+
+        300 was never validated against anything. It is only a safe number
+        once analysis stops happening inside the request; until then a
+        default this size is a denial of service that anyone can trigger.
+        """
+        default = Settings.model_fields["max_pages"].default
+
+        assert default <= 50, (
+            f"the default page budget is {default}. Analysis still runs "
+            "inside the request, so this is how long one upload can hold the "
+            "worker. Raise it only once analysis is off the request path."
+        )
 
 
 @pytest.mark.skipif(
