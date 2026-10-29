@@ -9,9 +9,14 @@ FROM python:3.13-slim AS base
 # PYTHONDONTWRITEBYTECODE: no .pyc files in a layer that is never reused.
 # PYTHONUNBUFFERED: logs appear immediately rather than when a buffer fills,
 #   which matters when the only way to debug a boot failure is the log stream.
+#
+# PIP_NO_CACHE_DIR is deliberately absent. It was set here, which made the
+# `--mount=type=cache` below do nothing at all: pip wrote no cache, so there
+# was nothing for the mount to keep. The two cancelled out and the file
+# implied build caching it did not have. A cache mount lives outside the
+# image, so dropping the variable costs no image size.
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
 WORKDIR /app
