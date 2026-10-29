@@ -126,6 +126,90 @@ jobs:
           TEST_DATABASE_URL: ${{ env.PG_URL }}
         run: pytest -q
 
+  docker:
+    name: Backend image builds and serves
+    runs-on: ubuntu-latest
+
+    # The Dockerfile and docker-compose.yml are what a deployment actually
+    # runs, and no other job here touches them. Every defect found the first
+    # time the image was built was invisible to the jobs above, because each
+    # one only happens in a container: the shipped image has no pytest, the
+    # suite needs COOKIE_SECURE=false to keep a cookie over plain http, and
+    # the test service must not share the API's database. Container-only
+    # failures need a container-only job.
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the images
+        run: docker compose --profile test build
+
+      - name: The shipped image must not carry test dependencies
+        # The test target is a separate stage for a reason. If the stage order
+        # in the Dockerfile ever changes so that `test` becomes the final one,
+        # a deploy would ship pytest and this is what notices.
+        run: |
+          if docker compose run --rm --no-deps --entrypoint python api -c "import pytest" 2>/dev/null; then
+            echo "::error::pytest is present in the shipped image; the test stage has leaked into it"
+            exit 1
+          fi
+          echo "pytest absent from the shipped image, as intended"
+
+      - name: Database, then migrations, then the API
+        # Migrations as their own step, mirroring the deployment: AUTO_MIGRATE
+        # is off in the image, so the API refuses to start against a schema
+        # that is not already at head.
+        run: |
+          docker compose up -d --wait db
+          docker compose run --rm migrate
+          docker compose up -d --wait api
+
+      - name: Health endpoint reports a real database connection
+        # The container's own HEALTHCHECK already queries the database, so
+        # --wait passing means a lot. This checks the payload too, because a
+        # degraded answer still returns a body.
+        run: |
+          body=$(curl -fsS --retry 10 --retry-delay 2 --retry-connrefused http://localhost:8000/api/health)
+          echo "$body"
+          test "$(echo "$body" | jq -r .status)" = ok
+          test "$(echo "$body" | jq -r .database)" = ok
+
+      - name: The analysis workflow runs end to end on PostgreSQL
+        run: |
+          jar=$(mktemp)
+          code=$(curl -s -c "$jar" -o /dev/null -w '%{http_code}'             -X POST http://localhost:8000/api/auth/signup             -H 'Content-Type: application/json'             -d '{"email":"ci@example.com","password":"correct-horse-battery-staple"}')
+          test "$code" = 201
+          body=$(curl -fsS -b "$jar" -X POST http://localhost:8000/api/analyses             -F "file=@samples/sample_report.pdf")
+          echo "$body" | jq '{id, findings: (.findings | length), recommendations: (.recommendations | length)}'
+          # Deliberately not pinned to the exact counts: those belong to the
+          # recommendation catalogue, which the backend suite covers. What
+          # matters here is that the pipeline produced output through the
+          # container and the row can be read back.
+          test "$(echo "$body" | jq -r '.findings | length')" -ge 1
+          test "$(echo "$body" | jq -r '.recommendations | length')" -ge 1
+          id=$(echo "$body" | jq -r .id)
+          test "$(curl -s -b "$jar" -o /dev/null -w '%{http_code}' "http://localhost:8000/api/analyses/$id")" = 200
+
+      - name: Suite inside the container, against that PostgreSQL
+        run: docker compose --profile test run --rm tests
+
+      - name: Running the suite did not wipe the stack's database
+        # The test service points at a separate database. If that regresses,
+        # the suite drops every table the API was using and this catches it.
+        run: |
+          users=$(docker compose exec -T db psql -U projectrevive -d projectrevive -tAc             'select count(*) from users' | tr -d '[:space:]')
+          echo "users still in the stack database: $users"
+          test "$users" -ge 1
+
+      - name: Container logs, if anything above failed
+        if: failure()
+        run: docker compose logs --no-color
+
+      - name: Tear down
+        # -v is right here and not locally: the runner is thrown away, and
+        # leaving no volume behind keeps reruns identical.
+        if: always()
+        run: docker compose down -v
+
   frontend:
     name: Frontend (Node 22)
     runs-on: ubuntu-latest

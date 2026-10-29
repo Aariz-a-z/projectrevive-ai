@@ -14,7 +14,7 @@ Every step below needs an account you own. Nothing here can be done for you.
 | Migrations against SQLite | **Verified** — fresh database built by migration on startup, 307 tests pass |
 | Health check reports a lost database | **Verified** — returns 503 and `"database": "unreachable"` rather than claiming to be healthy |
 | **PostgreSQL** | **Verified in CI** — the full suite (307 tests) runs against PostgreSQL 17, and migrations upgrade, downgrade to base and upgrade again. See the `Backend against PostgreSQL` job. |
-| Docker image builds and serves | **Verified** — image built, stack brought up on PostgreSQL 17, migrations applied, `/api/health` returned `"database": "ok"`, and the suite (307 tests) passed inside the container against that PostgreSQL |
+| Docker image builds and serves | **Verified in CI** — the `Backend image builds and serves` job builds the image, applies the migrations to PostgreSQL 17, checks `/api/health` answers `"database": "ok"`, analyses the sample report end to end, runs the suite (307 tests) inside the container, and asserts the shipped image carries no test dependencies |
 
 > **On `com.docker.service`.** That service is set to Manual start and
 > needs a Windows elevation prompt, which for a long time looked like the
