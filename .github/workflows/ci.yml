@@ -88,6 +88,11 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Tests
+        # Before the build, so a behavioural failure is reported in seconds
+        # rather than after a full production compile.
+        run: npm test
+
       - name: Build
         run: npm run build
 
